@@ -93,7 +93,7 @@ public class Reactor<T> implements Server<T> {
     private void handleAccept(ServerSocketChannel serverChan, Selector selector) throws IOException {
         SocketChannel clientChan = serverChan.accept();
         clientChan.configureBlocking(false);
-        final NonBlockingConnectionHandler<T> handler = new NonBlockingConnectionHandler<>(
+        final bgu.spl171.net.srv.UltraConnectionHandler<T> handler = new bgu.spl171.net.srv.UltraConnectionHandler<>(
                 readerFactory.get(),
                 protocolFactory.get(),
                 clientChan,
@@ -102,7 +102,7 @@ public class Reactor<T> implements Server<T> {
     }
 
     private void handleReadWrite(SelectionKey key) {
-        NonBlockingConnectionHandler handler = (NonBlockingConnectionHandler) key.attachment();
+        bgu.spl171.net.srv.UltraConnectionHandler handler = (bgu.spl171.net.srv.UltraConnectionHandler) key.attachment();
 
         if (key.isReadable()) {
             Runnable task = handler.continueRead();
