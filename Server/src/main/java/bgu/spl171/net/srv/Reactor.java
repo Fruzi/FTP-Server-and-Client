@@ -56,7 +56,8 @@ public class Reactor<T> implements Server<T> {
 
                     if (!key.isValid()) {
                         continue;
-                    } else if (key.isAcceptable()) {
+                    }
+                    if (key.isAcceptable()) {
                         handleAccept(serverSock, selector);
                     } else {
                         handleReadWrite(key);
@@ -83,9 +84,7 @@ public class Reactor<T> implements Server<T> {
         if (Thread.currentThread() == selectorThread) {
             key.interestOps(ops);
         } else {
-            selectorTasks.add(() -> {
-                key.interestOps(ops);
-            });
+            selectorTasks.add(() -> key.interestOps(ops));
             selector.wakeup();
         }
     }
@@ -94,7 +93,7 @@ public class Reactor<T> implements Server<T> {
     private void handleAccept(ServerSocketChannel serverChan, Selector selector) throws IOException {
         SocketChannel clientChan = serverChan.accept();
         clientChan.configureBlocking(false);
-        final NonBlockingConnectionHandler handler = new NonBlockingConnectionHandler(
+        final NonBlockingConnectionHandler<T> handler = new NonBlockingConnectionHandler<>(
                 readerFactory.get(),
                 protocolFactory.get(),
                 clientChan,
