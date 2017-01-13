@@ -13,11 +13,11 @@ public class ReactorMain {
     public static void main(String[] args) {
         //@TODO: Add a file database as a shared server object, like in NewsFeedServerMain,
         //@TODO: and send it to the protocol constructor
-        Object fileDatabase = new Object(); //PLACEHOLDER
+        Object archive = new Object(); //PLACEHOLDER
 
         Server.reactor(Runtime.getRuntime().availableProcessors(),
                 Integer.parseInt(args[0]),
-                () -> new PacketProtocol<>(fileDatabase),
+                () -> new PacketProtocol(archive),
                 PacketEncoderDecoder::new)
                 .serve();
     }

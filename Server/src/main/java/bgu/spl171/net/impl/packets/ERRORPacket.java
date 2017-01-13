@@ -7,7 +7,7 @@ package bgu.spl171.net.impl.packets;
 public class ERRORPacket extends Packet {
     private short errorCode;
     private String errMsg;
-    private byte delimiter = '\0';
+
 
     public ERRORPacket(short errorCode, String errMsg) {
         opCode=5;

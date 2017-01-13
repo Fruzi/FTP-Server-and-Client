@@ -6,7 +6,7 @@ package bgu.spl171.net.impl.packets;
  */
 public class DELRQPacket extends Packet {
     private String fileName;
-    private byte delimiter = '\0';
+
 
     public DELRQPacket(String userName) {
         opCode=8;

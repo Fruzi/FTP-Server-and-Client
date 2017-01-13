@@ -6,7 +6,7 @@ package bgu.spl171.net.impl.packets;
  */
 public class RRQPacket extends Packet {
     private String fileName;
-    private byte delimiter = '\0';
+
 
     public RRQPacket(String fileName) {
         opCode=1;

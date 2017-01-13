@@ -6,7 +6,7 @@ package bgu.spl171.net.impl.packets;
  */
 public class WRQPacket extends Packet {
     private String fileName;
-    private byte end = '\0';
+
 
     public WRQPacket(String fileName) {
         opCode=2;

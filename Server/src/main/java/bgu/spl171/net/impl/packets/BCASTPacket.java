@@ -7,7 +7,6 @@ package bgu.spl171.net.impl.packets;
 public class BCASTPacket extends Packet {
     private byte delOrAdd;
     private String fileName;
-    private byte delimiter = '\0';
 
     public BCASTPacket(byte delOrAdd, String fileName) {
         opCode=9;

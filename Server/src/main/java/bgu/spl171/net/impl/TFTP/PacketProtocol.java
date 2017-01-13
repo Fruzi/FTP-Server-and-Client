@@ -4,20 +4,23 @@ import bgu.spl171.net.api.bidi.BidiMessagingProtocol;
 import bgu.spl171.net.api.bidi.Connections;
 import bgu.spl171.net.impl.packets.*;
 
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+
 /**
  * Created by Uzi the magnanimous, breaker of code and loader of IDEs. He who has tamed the java beast and crossed the narrow C(++).
  * on this, 1/12/2017 the day of reckoning.
  */
-public class PacketProtocol<T> implements BidiMessagingProtocol<Packet> {
-    private final T fileDatabase;
+public class PacketProtocol implements BidiMessagingProtocol<Packet> {
+    private final Object archive;
 
     private boolean terminateMe;
     private int ownerID;
     private Connections<Packet> connections;
 
     //"T arg" is the file database
-    public PacketProtocol(T fileDatabase) {
-        this.fileDatabase = fileDatabase;
+    public PacketProtocol(Object archive) {
+        this.archive = archive;
         terminateMe = false;
     }
 
@@ -27,7 +30,6 @@ public class PacketProtocol<T> implements BidiMessagingProtocol<Packet> {
         this.connections = connections;
     }
 
-    //Use the file database here (like in NewsFeed)
     @Override
     public void process(Packet msg) {
         short opCode = msg.getOpCode();
@@ -107,6 +109,7 @@ public class PacketProtocol<T> implements BidiMessagingProtocol<Packet> {
 
     private void processDISC(DISCPacket msg) {
     }
+
 
     @Override
     public boolean shouldTerminate() {
