@@ -11,4 +11,8 @@ public class ACKPack extends Packet {
         opCode=4;
         this.blockNum = blockNum;
     }
+
+    public short getBlockNum() {
+        return blockNum;
+    }
 }

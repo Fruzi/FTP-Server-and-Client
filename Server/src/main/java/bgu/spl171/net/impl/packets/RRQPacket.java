@@ -6,10 +6,14 @@ package bgu.spl171.net.impl.packets;
  */
 public class RRQPacket extends Packet {
     private String fileName;
-    private byte end = '\0';
+    private byte delimiter = '\0';
 
     public RRQPacket(String fileName) {
         opCode=1;
         this.fileName = fileName;
+    }
+
+    public String getFileName() {
+        return fileName;
     }
 }

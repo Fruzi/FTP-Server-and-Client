@@ -2,6 +2,8 @@ package bgu.spl171.net.srv;
 
 import bgu.spl171.net.api.MessageEncoderDecoder;
 import bgu.spl171.net.api.MessagingProtocol;
+import bgu.spl171.net.api.bidi.BidiMessagingProtocol;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedSelectorException;
@@ -15,7 +17,7 @@ import java.util.function.Supplier;
 public class Reactor<T> implements Server<T> {
 
     private final int port;
-    private final Supplier<MessagingProtocol<T>> protocolFactory;
+    private final Supplier<BidiMessagingProtocol<T>> protocolFactory;
     private final Supplier<MessageEncoderDecoder<T>> readerFactory;
     private final ActorThreadPool pool;
     private Selector selector;
@@ -26,7 +28,7 @@ public class Reactor<T> implements Server<T> {
     public Reactor(
             int numThreads,
             int port,
-            Supplier<MessagingProtocol<T>> protocolFactory,
+            Supplier<BidiMessagingProtocol<T>> protocolFactory,
             Supplier<MessageEncoderDecoder<T>> readerFactory) {
 
         this.pool = new ActorThreadPool(numThreads);
@@ -93,7 +95,7 @@ public class Reactor<T> implements Server<T> {
     private void handleAccept(ServerSocketChannel serverChan, Selector selector) throws IOException {
         SocketChannel clientChan = serverChan.accept();
         clientChan.configureBlocking(false);
-        final bgu.spl171.net.srv.UltraConnectionHandler<T> handler = new bgu.spl171.net.srv.UltraConnectionHandler<>(
+        final UltraConnectionHandler<T> handler = new UltraConnectionHandler<>(
                 readerFactory.get(),
                 protocolFactory.get(),
                 clientChan,
@@ -102,7 +104,7 @@ public class Reactor<T> implements Server<T> {
     }
 
     private void handleReadWrite(SelectionKey key) {
-        bgu.spl171.net.srv.UltraConnectionHandler handler = (bgu.spl171.net.srv.UltraConnectionHandler) key.attachment();
+        UltraConnectionHandler handler = (UltraConnectionHandler) key.attachment();
 
         if (key.isReadable()) {
             Runnable task = handler.continueRead();

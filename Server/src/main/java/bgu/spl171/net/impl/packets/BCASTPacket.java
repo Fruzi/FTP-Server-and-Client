@@ -14,4 +14,12 @@ public class BCASTPacket extends Packet {
         this.delOrAdd = delOrAdd;
         this.fileName = fileName;
     }
+
+    public byte getDelOrAdd() {
+        return delOrAdd;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
 }

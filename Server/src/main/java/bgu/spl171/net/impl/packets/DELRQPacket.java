@@ -12,4 +12,8 @@ public class DELRQPacket extends Packet {
         opCode=8;
         this.fileName = userName;
     }
+
+    public String getFileName() {
+        return fileName;
+    }
 }

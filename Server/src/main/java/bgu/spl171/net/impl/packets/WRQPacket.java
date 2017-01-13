@@ -12,4 +12,8 @@ public class WRQPacket extends Packet {
         opCode=2;
         this.fileName = fileName;
     }
+
+    public String getFileName(){
+        return fileName;
+    }
 }

@@ -25,7 +25,7 @@ public class UltraConnectionHandler<T> implements ConnectionHandler<T>, java.io.
 
     public UltraConnectionHandler(
             MessageEncoderDecoder<T> reader,
-            MessagingProtocol<T> protocol,
+            BidiMessagingProtocol<T> protocol,
             SocketChannel chan,
             Reactor reactor) {
         this.chan = chan;

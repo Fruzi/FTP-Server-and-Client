@@ -12,4 +12,8 @@ public class LOGRQPacket extends Packet {
         opCode=7;
         this.userName = userName;
     }
+
+    public String getUserName() {
+        return userName;
+    }
 }

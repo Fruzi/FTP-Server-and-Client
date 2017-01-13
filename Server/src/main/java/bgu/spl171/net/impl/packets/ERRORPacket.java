@@ -14,4 +14,12 @@ public class ERRORPacket extends Packet {
         this.errorCode = errorCode;
         this.errMsg = errMsg;
     }
+
+    public short getErrorCode() {
+        return errorCode;
+    }
+
+    public String getErrMsg() {
+        return errMsg;
+    }
 }
