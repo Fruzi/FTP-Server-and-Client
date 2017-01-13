@@ -3,16 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="06d6e9ce-745c-4484-bf70-a0671c458263" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/TFTP/PacketProtocol.java" afterPath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/TFTP/PacketProtocol.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/TFTPreactor/ReactorMain.java" afterPath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/TFTPreactor/ReactorMain.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/TFTPtpc/TPCMain.java" afterPath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/TFTPtpc/TPCMain.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/packets/BCASTPacket.java" afterPath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/packets/BCASTPacket.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/packets/DELRQPacket.java" afterPath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/packets/DELRQPacket.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/packets/ERRORPacket.java" afterPath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/packets/ERRORPacket.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/packets/LOGRQPacket.java" afterPath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/packets/LOGRQPacket.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/packets/Packet.java" afterPath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/packets/Packet.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/packets/RRQPacket.java" afterPath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/packets/RRQPacket.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/packets/WRQPacket.java" afterPath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/packets/WRQPacket.java" />
     </list>
     <ignored path="$PROJECT_DIR$/target/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -817,7 +807,14 @@
       <option name="project" value="LOCAL" />
       <updated>1484322648673</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary=" Added getters for the Packets, switch case in the process function of PacketProtocol and private methods (yet to be implemented) to handle each packet type.">
+      <created>1484330322906</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1484330322906</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TodoView" selected-index="2">
