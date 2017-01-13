@@ -17,8 +17,10 @@ import java.util.function.Supplier;
 public class Reactor<T> implements Server<T> {
 
     private final int port;
+    private int connectionId;
     private final Supplier<BidiMessagingProtocol<T>> protocolFactory;
     private final Supplier<MessageEncoderDecoder<T>> readerFactory;
+    private final ConnectionsImpl<T> connections;
     private final ActorThreadPool pool;
     private Selector selector;
 
@@ -35,6 +37,8 @@ public class Reactor<T> implements Server<T> {
         this.port = port;
         this.protocolFactory = protocolFactory;
         this.readerFactory = readerFactory;
+        connections = new ConnectionsImpl<>();
+        connectionId = 0;
     }
 
     @Override
@@ -94,17 +98,21 @@ public class Reactor<T> implements Server<T> {
 
     private void handleAccept(ServerSocketChannel serverChan, Selector selector) throws IOException {
         SocketChannel clientChan = serverChan.accept();
+
         clientChan.configureBlocking(false);
-        final UltraConnectionHandler<T> handler = new UltraConnectionHandler<>(
+        final NonBlockingConnectionHandler<T> handler = new NonBlockingConnectionHandler<>(
+                connectionId++,
                 readerFactory.get(),
                 protocolFactory.get(),
                 clientChan,
+                connections,
                 this);
+        connections.add(connectionId, handler);
         clientChan.register(selector, SelectionKey.OP_READ, handler);
     }
 
     private void handleReadWrite(SelectionKey key) {
-        UltraConnectionHandler handler = (UltraConnectionHandler) key.attachment();
+        NonBlockingConnectionHandler handler = (NonBlockingConnectionHandler) key.attachment();
 
         if (key.isReadable()) {
             Runnable task = handler.continueRead();

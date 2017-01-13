@@ -1,7 +1,6 @@
 package bgu.spl171.net.srv;
 
 import bgu.spl171.net.api.MessageEncoderDecoder;
-import bgu.spl171.net.api.MessagingProtocol;
 import bgu.spl171.net.api.bidi.BidiMessagingProtocol;
 
 import java.io.IOException;
@@ -16,6 +15,7 @@ public abstract class BaseServer<T> implements Server<T> {
     private final Supplier<MessageEncoderDecoder<T>> encdecFactory;
     private ConnectionsImpl<T> connections;
     private ServerSocket sock;
+    private int connectionId;
 
     public BaseServer(
             int port,
@@ -27,6 +27,7 @@ public abstract class BaseServer<T> implements Server<T> {
         this.encdecFactory = encdecFactory;
         connections = new ConnectionsImpl<>();
 		this.sock = null;
+		connectionId = 0;
     }
 
     @Override
@@ -41,10 +42,12 @@ public abstract class BaseServer<T> implements Server<T> {
                 Socket clientSock = serverSock.accept();
 
                 BlockingConnectionHandler<T> handler = new BlockingConnectionHandler<>(
+                        connectionId++,
                         clientSock,
                         encdecFactory.get(),
-                        protocolFactory.get());
-
+                        protocolFactory.get(),
+                        connections);
+                connections.add(connectionId, handler);
                 execute(handler);
             }
         } catch (IOException ex) {
