@@ -41,39 +41,39 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     public void process(Packet msg) {
         short opCode = msg.getOpCode();
         switch(opCode){
-            case 1:
+            case Packet.RRQ:
                 String fileName=((RRQPacket) msg).getFileName();
                 File reqFile = new File("./Files/" + fileName);
                 fileBeingSent=reqFile;
                 sendingData=true;
                 processRRQ(reqFile);
                 break;
-            case 2:
+            case Packet.WRQ:
                 processWRQ((WRQPacket)msg);
                 break;
-            case 3:
+            case Packet.DATA:
                 processDATA((DATAPacket)msg);
                 break;
-            case 4:
+            case Packet.ACK:
                 processACK((ACKPack)msg);
                 break;
-            case 5:
+            case Packet.ERROR:
                 processERROR((ERRORPacket)msg);
                 break;
-            case 6:
+            case Packet.DIRQ:
                 processDIRQ((DIRQPacket)msg);
                 break;
-            case 7:
+            case Packet.LOGRQ:
                 processLOGRQ((LOGRQPacket)msg);
                 break;
-            case 8:
+            case Packet.DELRQ:
                 processDELRQ((DELRQPacket)msg);
                 break;
-            case 9:
+            case Packet.BCAST:
                 processBCAST((BCASTPacket)msg);
                 break;
-            case 10:
-                processDISC((DISCPacket)msg);
+            case Packet.DISC:
+                processDISC();
                 break;
         }
     }
@@ -116,6 +116,12 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     private void processWRQ(WRQPacket msg){
         String fileName=msg.getFileName();
 
+        /*
+            String fileName=reqFile.getName();
+            BCASTPacket bcastPacket = new BCASTPacket((byte)1,fileName);
+            processBCAST(bcastPacket);
+         */
+
     }
 
     private void processDATA(DATAPacket msg){
@@ -126,7 +132,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     }
 
     private void processACK(ACKPack msg){
-        lastAck=blockNum=msg.getBlockNum();
+        lastAck=msg.getBlockNum();
         if (sendingData && lastAck==this.blockNum-1){
             processRRQ(fileBeingSent);
         }
@@ -164,6 +170,8 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             if(file.delete()){
                 ACKPack ackPack = new ACKPack((short)0);
                 connections.send(ownerID, ackPack);
+                BCASTPacket bcastPacket = new BCASTPacket((byte)0, fileName);
+                processBCAST(bcastPacket);
             }else{
                 //@TODO actual error handling
                 short errorNum = 0; //placeholder
@@ -183,8 +191,10 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         String fileName=msg.getFileName();
     }
 
-    private void processDISC(DISCPacket msg) {
-
+    private void processDISC() {
+        loggedUsers.remove(ownerID);
+        ACKPack ackPack = new ACKPack((short)0);
+        connections.send(ownerID,ackPack);
     }
 
 
