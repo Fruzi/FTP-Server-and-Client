@@ -21,7 +21,7 @@ public class LineMessageEncoderDecoder implements MessageEncoderDecoder<String> 
 
     @Override
     public byte[] encode(String message) {
-        return message.getBytes();
+        return (message + "\0").getBytes();
     }
 
     private void pushByte(byte nextByte) {

@@ -228,10 +228,9 @@ public class PacketEncoderDecoder implements MessageEncoderDecoder<Packet> {
 
     private byte[] encodeMessagePacket(Packet message, byte[] opCodeBytes) {
         byte[] strDataBytes = encodeStrData(message);
-        byte[] res = new byte[strDataBytes.length + 3];
+        byte[] res = new byte[strDataBytes.length + 2];
         System.arraycopy(opCodeBytes, 0, res, 0, opCodeBytes.length);
         System.arraycopy(strDataBytes, 0, res, 2, strDataBytes.length);
-        res[res.length - 1] = '\0';
         return res;
     }
 
@@ -257,21 +256,19 @@ public class PacketEncoderDecoder implements MessageEncoderDecoder<Packet> {
     private byte[] encodeERRORPacket(Packet message, byte[] opCodeBytes) {
         byte[] errorCodeBytes = encodeErrorCode(message);
         byte[] strDataBytes = encodeStrData(message);
-        byte[] res = new byte[strDataBytes.length + 5];
+        byte[] res = new byte[strDataBytes.length + 4];
         System.arraycopy(opCodeBytes, 0, res, 0, opCodeBytes.length);
         System.arraycopy(errorCodeBytes, 0, res, 2, errorCodeBytes.length);
         System.arraycopy(strDataBytes, 0, res, 4, strDataBytes.length);
-        res[res.length - 1] = '\0';
         return res;
     }
 
     private byte[] encodeBCASTPacket(Packet message, byte[] opCodeBytes) {
         byte[] strDataBytes = encodeStrData(message);
-        byte[] res = new byte[strDataBytes.length + 4];
+        byte[] res = new byte[strDataBytes.length + 3];
         System.arraycopy(opCodeBytes, 0, res, 0, opCodeBytes.length);
         res[2] = ((BCASTPacket)message).getDelOrAdd();
         System.arraycopy(strDataBytes, 0, res, 3, strDataBytes.length);
-        res[res.length - 1] = '\0';
         return res;
     }
 
