@@ -38,15 +38,38 @@ public class PacketEncoderDecoder implements MessageEncoderDecoder<Packet> {
             if (isStringMessagePacket())
                 return decodeMessagePacket(nextByte);
             if (opCode == Packet.DATA)
-                return decodeDataPacket(nextByte);
+                return decodeDATAPacket(nextByte);
             if (opCode == Packet.ACK)
-                return decodeACKPacket(nextByte);
+                return decodeACKPack(nextByte);
             if (opCode == Packet.ERROR)
                 return decodeERRORPacket(nextByte);
             if (opCode == Packet.BCAST)
                 return decodeBCASTPacket(nextByte);
         }
         return null;
+    }
+
+    @Override
+    public byte[] encode(Packet message) {
+        if (message == null)
+            return null;
+        byte[] res = null;
+        byte[] opCodeBytes = encodeOpCode(message);
+        if (opCode == Packet.DIRQ || opCode == Packet.DISC) {
+            res = opCodeBytes;
+        } else if (isStringMessagePacket()) {
+            res = encodeMessagePacket(message, opCodeBytes);
+        } else if (opCode == Packet.DATA) {
+            res = encodeDATAPacket(message, opCodeBytes);
+        } else if (opCode == Packet.ACK) {
+            res = encodeACKPack(message, opCodeBytes);
+        } else if (opCode == Packet.ERROR) {
+            res = encodeERRORPacket(message, opCodeBytes);
+        } else if (opCode == Packet.BCAST) {
+            res = encodeBCASTPacket(message, opCodeBytes);
+        }
+        resetFields();
+        return res;
     }
 
     private short decodeShortPacketSegment(byte nextByte, short value) {
@@ -80,7 +103,7 @@ public class PacketEncoderDecoder implements MessageEncoderDecoder<Packet> {
         return null;
     }
 
-    private DATAPacket decodeDataPacket(byte nextByte) {
+    private DATAPacket decodeDATAPacket(byte nextByte) {
         if (dataPacketSize == -1) {
             dataPacketSize = decodeShortPacketSegment(nextByte, dataPacketSize);
         } else {
@@ -103,15 +126,13 @@ public class PacketEncoderDecoder implements MessageEncoderDecoder<Packet> {
         return null;
     }
 
-    private ACKPack decodeACKPacket(byte nextByte) {
-        //if (blockNumber == -1) {
-            blockNumber = decodeShortPacketSegment(nextByte, blockNumber);
-            if (blockNumber != -1) {
-                ACKPack result = new ACKPack(blockNumber);
-                resetFields();
-                return result;
-            }
-        //}
+    private ACKPack decodeACKPack(byte nextByte) {
+        blockNumber = decodeShortPacketSegment(nextByte, blockNumber);
+        if (blockNumber != -1) {
+            ACKPack result = new ACKPack(blockNumber);
+            resetFields();
+            return result;
+        }
         return null;
     }
 
@@ -159,6 +180,101 @@ public class PacketEncoderDecoder implements MessageEncoderDecoder<Packet> {
         return null;
     }
 
+    private String getStrData(Packet message) {
+        switch (message.getOpCode()) {
+            case Packet.RRQ:
+                return ((RRQPacket)message).getFileName();
+            case Packet.WRQ:
+                return ((WRQPacket)message).getFileName();
+            case Packet.LOGRQ:
+                return ((LOGRQPacket)message).getUserName();
+            case Packet.DELRQ:
+                return ((DELRQPacket)message).getFileName();
+            case Packet.ERROR:
+                return ((ERRORPacket)message).getErrMsg();
+            case Packet.BCAST:
+                return ((BCASTPacket)message).getFileName();
+        }
+        return null;
+    }
+
+    private byte[] encodeOpCode(Packet message) {
+        opCode = message.getOpCode();
+        return shortToBytes(opCode);
+    }
+
+    private byte[] encodeStrData(Packet message) {
+        String strData = getStrData(message);
+        if (messageEncDec == null)
+            messageEncDec = new LineMessageEncoderDecoder();
+        return messageEncDec.encode(strData);
+    }
+
+    private byte[] encodePacketSize(Packet message) {
+        dataPacketSize = ((DATAPacket)message).getPacketSize();
+        return shortToBytes(dataPacketSize);
+    }
+
+    private byte[] encodeBlockNumber(Packet message) {
+        blockNumber = opCode == Packet.DATA ? ((DATAPacket)message).getBlockNum()
+                : ((ACKPack)message).getBlockNum();
+        return shortToBytes(blockNumber);
+    }
+
+    private byte[] encodeErrorCode(Packet message) {
+        errorCode = ((ERRORPacket)message).getErrorCode();
+        return shortToBytes(errorCode);
+    }
+
+    private byte[] encodeMessagePacket(Packet message, byte[] opCodeBytes) {
+        byte[] strDataBytes = encodeStrData(message);
+        byte[] res = new byte[strDataBytes.length + 3];
+        System.arraycopy(opCodeBytes, 0, res, 0, opCodeBytes.length);
+        System.arraycopy(strDataBytes, 0, res, 2, strDataBytes.length);
+        res[res.length - 1] = '\0';
+        return res;
+    }
+
+    private byte[] encodeDATAPacket(Packet message, byte[] opCodeBytes) {
+        byte[] packetSizeBytes = encodePacketSize(message);
+        byte[] blockNumberBytes = encodeBlockNumber(message);
+        dataBytes = ((DATAPacket)message).getData();
+        byte[] res = new byte[dataBytes.length + 6];
+        System.arraycopy(opCodeBytes, 0, res, 0, opCodeBytes.length);
+        System.arraycopy(packetSizeBytes, 0, res, 2, packetSizeBytes.length);
+        System.arraycopy(blockNumberBytes, 0, res, 4, blockNumberBytes.length);
+        System.arraycopy(dataBytes, 0, res, 6, dataBytes.length);
+        return res;
+    }
+
+    private byte[] encodeACKPack(Packet message, byte[] opCodeBytes) {
+        byte[] res = new byte[4];
+        byte[] blockNumberBytes = encodeBlockNumber(message);
+        System.arraycopy(opCodeBytes, 0, res, 0, opCodeBytes.length);
+        System.arraycopy(blockNumberBytes, 0, res, 2, blockNumberBytes.length);
+        return res;
+    }
+    private byte[] encodeERRORPacket(Packet message, byte[] opCodeBytes) {
+        byte[] errorCodeBytes = encodeErrorCode(message);
+        byte[] strDataBytes = encodeStrData(message);
+        byte[] res = new byte[strDataBytes.length + 5];
+        System.arraycopy(opCodeBytes, 0, res, 0, opCodeBytes.length);
+        System.arraycopy(errorCodeBytes, 0, res, 2, errorCodeBytes.length);
+        System.arraycopy(strDataBytes, 0, res, 4, strDataBytes.length);
+        res[res.length - 1] = '\0';
+        return res;
+    }
+
+    private byte[] encodeBCASTPacket(Packet message, byte[] opCodeBytes) {
+        byte[] strDataBytes = encodeStrData(message);
+        byte[] res = new byte[strDataBytes.length + 4];
+        System.arraycopy(opCodeBytes, 0, res, 0, opCodeBytes.length);
+        res[2] = ((BCASTPacket)message).getDelOrAdd();
+        System.arraycopy(strDataBytes, 0, res, 3, strDataBytes.length);
+        res[res.length - 1] = '\0';
+        return res;
+    }
+
     private void resetFields() {
         opCode = -1;
         dataPacketSize = -1;
@@ -167,24 +283,18 @@ public class PacketEncoderDecoder implements MessageEncoderDecoder<Packet> {
         deletedAdded = -1;
     }
 
-    private short bytesToShort(byte[] byteArr)
-    {
+    private short bytesToShort(byte[] byteArr) {
         short result = (short)((byteArr[0] & 0xff) << 8);
         result += (short)(byteArr[1] & 0xff);
         return result;
     }
 
-    private byte[] shortToBytes(short num)
-    {
+    private byte[] shortToBytes(short num) {
         byte[] bytesArr = new byte[2];
         bytesArr[0] = (byte)((num >> 8) & 0xFF);
         bytesArr[1] = (byte)(num & 0xFF);
         return bytesArr;
     }
 
-    @Override
-    public byte[] encode(Packet message) {
-        //@TODO
-        return new byte[0];
-    }
+
 }

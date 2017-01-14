@@ -26,8 +26,6 @@ public class NonBlockingConnectionHandler<T> implements ConnectionHandler<T>, ja
     private final Connections<T> connections;
     private final Reactor reactor;
 
-    private final AtomicBoolean protocolStarted;
-
     public NonBlockingConnectionHandler(
             int connectionId,
             MessageEncoderDecoder<T> reader,
@@ -41,7 +39,6 @@ public class NonBlockingConnectionHandler<T> implements ConnectionHandler<T>, ja
         this.protocol = protocol;
         this.connections = connections;
         this.reactor = reactor;
-        protocolStarted = new AtomicBoolean(false);
     }
 
     @Override
@@ -69,9 +66,6 @@ public class NonBlockingConnectionHandler<T> implements ConnectionHandler<T>, ja
                     while (buf.hasRemaining()) {
                         T nextMessage = encdec.decodeNextByte(buf.get());
                         if (nextMessage != null) {
-                            if (protocolStarted.compareAndSet(false, true)) {
-                                protocol.start(connectionId, connections);
-                            }
                             protocol.process(nextMessage);
                         }
                     }
