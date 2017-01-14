@@ -119,7 +119,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         /*
             String fileName=reqFile.getName();
             BCASTPacket bcastPacket = new BCASTPacket((byte)1,fileName);
-            processBCAST(bcastPacket);
+            broadcast(bcastPacket);
          */
 
     }
@@ -171,7 +171,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
                 ACKPack ackPack = new ACKPack((short)0);
                 connections.send(ownerID, ackPack);
                 BCASTPacket bcastPacket = new BCASTPacket((byte)0, fileName);
-                processBCAST(bcastPacket);
+               broadcast(bcastPacket);
             }else{
                 //@TODO actual error handling
                 short errorNum = 0; //placeholder
@@ -186,9 +186,16 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         }
     }
 
+    private void broadcast(BCASTPacket msg){
+        for (Integer connectionID : loggedUsers.keySet()){
+            connections.send(connectionID,msg);
+        }
+    }
+
     private void processBCAST(BCASTPacket msg){
         byte delOrAdd=msg.getDelOrAdd();
         String fileName=msg.getFileName();
+        //print the message
     }
 
     private void processDISC() {

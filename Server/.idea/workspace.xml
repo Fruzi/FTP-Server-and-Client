@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="06d6e9ce-745c-4484-bf70-a0671c458263" name="Default" comment="">
+    <list default="true" id="06d6e9ce-745c-4484-bf70-a0671c458263" name="Default" comment="fixed the broadcast logic to work properly, now processBCAST is done from the client while &quot;broadcast&quot; is the function the server uses to send the packet to all logged-in users">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/TFTP/PacketProtocol.java" afterPath="$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/TFTP/PacketProtocol.java" />
     </list>
@@ -25,8 +25,8 @@
       <file leaf-file-name="PacketProtocol.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/TFTP/PacketProtocol.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-556">
-              <caret line="133" column="24" lean-forward="false" selection-start-line="133" selection-start-column="24" selection-end-line="133" selection-end-column="24" />
+            <state relative-caret-position="227">
+              <caret line="16" column="4" lean-forward="false" selection-start-line="16" selection-start-column="4" selection-end-line="16" selection-end-column="4" />
               <folding>
                 <element signature="imports" expanded="true" />
                 <element signature="e#949#950#0" expanded="true" />
@@ -91,7 +91,7 @@
       <file leaf-file-name="ConnectionsImpl.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/bgu/spl171/net/srv/ConnectionsImpl.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="470">
+            <state relative-caret-position="630">
               <caret line="40" column="22" lean-forward="false" selection-start-line="40" selection-start-column="0" selection-end-line="41" selection-end-column="0" />
               <folding />
             </state>
@@ -120,6 +120,8 @@
       <find>IOE</find>
       <find>ioex</find>
       <find>index</find>
+      <find>for</find>
+      <find>bcast</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -822,7 +824,14 @@
       <option name="project" value="LOCAL" />
       <updated>1484412078648</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="little fixin', little adding">
+      <created>1484413338703</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1484413338703</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TodoView" selected-index="2">
@@ -841,7 +850,7 @@
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3298731" sideWeight="0.4978001" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Nl-Palette" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
-      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.15109573" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.15109573" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Palette&#9;" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
       <window_info id="Image Layers" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Capture Analysis" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
@@ -878,7 +887,9 @@
     <MESSAGE value=" Added getters for the Packets, switch case in the process function of PacketProtocol and private methods (yet to be implemented) to handle each packet type." />
     <MESSAGE value="minor tweeks" />
     <MESSAGE value="added some packet execution implementation, FML" />
-    <option name="LAST_COMMIT_MESSAGE" value="added some packet execution implementation, FML" />
+    <MESSAGE value="little fixin', little adding" />
+    <MESSAGE value="fixed the broadcast logic to work properly, now processBCAST is done from the client while &quot;broadcast&quot; is the function the server uses to send the packet to all logged-in users" />
+    <option name="LAST_COMMIT_MESSAGE" value="fixed the broadcast logic to work properly, now processBCAST is done from the client while &quot;broadcast&quot; is the function the server uses to send the packet to all logged-in users" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager />
@@ -1252,14 +1263,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/bgu/spl171/net/srv/ConnectionsImpl.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="470">
-          <caret line="40" column="22" lean-forward="false" selection-start-line="40" selection-start-column="0" selection-end-line="41" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="jar://C:/Program Files/Java/jdk1.8.0_112/src.zip!/java/io/File.java">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-153">
@@ -1320,10 +1323,18 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/bgu/spl171/net/srv/ConnectionsImpl.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="630">
+          <caret line="40" column="22" lean-forward="false" selection-start-line="40" selection-start-column="0" selection-end-line="41" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/bgu/spl171/net/impl/TFTP/PacketProtocol.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-556">
-          <caret line="133" column="24" lean-forward="false" selection-start-line="133" selection-start-column="24" selection-end-line="133" selection-end-column="24" />
+        <state relative-caret-position="227">
+          <caret line="16" column="4" lean-forward="false" selection-start-line="16" selection-start-column="4" selection-end-line="16" selection-end-column="4" />
           <folding>
             <element signature="imports" expanded="true" />
             <element signature="e#949#950#0" expanded="true" />
