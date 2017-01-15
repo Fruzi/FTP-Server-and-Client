@@ -15,7 +15,7 @@ public class TPCMain {
         //@TODO: and send it to the protocol constructor
 
         Server.threadPerClient(Integer.parseInt(args[0]),
-                () -> new PacketProtocol(),
+                PacketProtocol::new,
                 PacketEncoderDecoder::new)
                 .serve();
     }

@@ -16,7 +16,7 @@ public class ReactorMain {
 
         Server.reactor(Runtime.getRuntime().availableProcessors(),
                 Integer.parseInt(args[0]),
-                () -> new PacketProtocol(),
+                PacketProtocol::new,
                 PacketEncoderDecoder::new)
                 .serve();
     }
