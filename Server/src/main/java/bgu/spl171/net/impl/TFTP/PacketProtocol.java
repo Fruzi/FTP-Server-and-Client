@@ -8,6 +8,8 @@ import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 
+//@TODO make sure the error message sent is of the lowest possible value
+
 /**
  * Created by Uzi the magnanimous, breaker of code and loader of IDEs. He who has tamed the java beast and crossed the narrow C(++).
  * on this, 1/12/2017 the day of reckoning.
@@ -20,12 +22,9 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     private FileInputStream fileStream;
     private boolean sendingReadData = false;
     private boolean sendingDIRQ = false;
-    private boolean sendingWriteData = false;
-    private boolean recievingDIRQ = false;
-    private boolean recivingWriteData;
-    private File generatedFile;
+    private File fileBeingReceived;
     private short blockNum=1;
-    private int lastAck =0;
+    private short lastAck =0;
 
     private boolean terminateMe;
     private int ownerID;
@@ -46,25 +45,12 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         short opCode = msg.getOpCode();
         switch(opCode){
             case Packet.RRQ:
-                String fileName=((RRQPacket) msg).getFileName();
-                File reqFile = new File("./Files/" + fileName);
-                if(!reqFile.exists()){
-                    //@TODO error message
-                    return;
-                }
-                try {
-                    fileStream = new FileInputStream(reqFile);
-                }
-                catch (IOException e){
-                    e.printStackTrace();
-                 }
-                sendingReadData =true;
-                processRRQ();
+                processRRQ(((RRQPacket)msg).getFileName());
                 break;
 
-                case Packet.WRQ:
-                    processWRQ((WRQPacket)msg);
-                    break;
+            case Packet.WRQ:
+                processWRQ(((WRQPacket)msg).getFileName());
+                break;
 
             case Packet.DATA:
                 processDATA((DATAPacket)msg);
@@ -75,24 +61,10 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
                 break;
 
             case Packet.ERROR:
-                processERROR((ERRORPacket)msg);
+                processERROR();
                 break;
 
             case Packet.DIRQ:
-                File listPath = new File("./Files");
-                File[] fileList = listPath.listFiles();
-                if (fileList==null){
-                    DATAPacket dataPacket = new DATAPacket((short)0,(short)0,null);
-                    connections.send(ownerID,dataPacket);
-                    return;
-                }
-                String nameList = "";
-                for (File file : fileList){
-                    nameList+=(file.getName()+'\0');
-                }
-                byte[] fileListInBytes=nameList.getBytes();
-                byteSteam = new ByteArrayInputStream(fileListInBytes);
-                sendingDIRQ=true;
                 processDIRQ();
                 break;
 
@@ -104,19 +76,39 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
                 processDELRQ((DELRQPacket)msg);
                 break;
 
+            /*
             case Packet.BCAST:
                 processBCAST((BCASTPacket)msg);
                 break;
-
+            */
             case Packet.DISC:
                 processDISC();
                 break;
+
+            default:
+                sendError((short)4, "Illegal OP Code");
         }
     }
 
-    private void processRRQ() {
+    private void processRRQ(String fileName){
+        File reqFile = new File("./Files/" + fileName);
+        if(!reqFile.exists()){
+            sendError((short)1, "File Not Found");
+            return;
+        }
+        try {
+            fileStream = new FileInputStream(reqFile);
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
+        sendingReadData =true;
+        sendFileData();
+    }
+
+    private void sendFileData() {
         if (!isLoggedIn()){
-            //@TODO error message
+            sendError((short)6, "Not Logged In!!");
             return;
         }
         byte[] data = new byte[512];
@@ -136,21 +128,19 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         }
     }
 
-    private void processWRQ(WRQPacket msg){
+    private void processWRQ(String fileName){
         if (!isLoggedIn()){
-            //@TODO error message
+            sendError((short)6, "Not Logged In!!");
             return;
         }
-        generatedFile=new File(msg.getFileName());
+        fileBeingReceived =new File(fileName);
         try{
-            if (generatedFile.createNewFile()){
-                recivingWriteData=true;
-                ACKPack ackPack = new ACKPack((short)0);
-                connections.send(ownerID,ackPack);
+            if (fileBeingReceived.createNewFile()){
+                sendACK((short)0);
             }
             else {
-                generatedFile=null;
-                //@TODO error message
+                fileBeingReceived =null;
+                sendError((short)5, "File already exists");
             }
         }
         catch (IOException e){
@@ -160,59 +150,68 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
 
     private void processDATA(DATAPacket msg){
         if (!isLoggedIn()){
-            //@TODO error message
+            sendError((short)6, "Not Logged In!!");
+            return;
+        }
+        if (fileBeingReceived ==null){
+            sendError((short)0, "Didn't receive a WRQ");
             return;
         }
         int packetSize=msg.getPacketSize();
-        int blockNum=msg.getBlockNum();
+        short blockNum=msg.getBlockNum();
         byte[] data=msg.getData();
+        //@TODO add the data to fileBeingReceived
+        sendACK(blockNum);
         if (packetSize!=512){
-            //this is the last packet
-        }
-        //I am either the server receiving data from a WRQ or the client receiving either DIRQ or RRQ
-        if (recivingWriteData){
-            //the server getting WRQ
-        }
-        if (recievingDIRQ){
-            //client getting Dir info
-        }
-        else {
-            //client receiving RRQ
+            //@TODO this is the last packet, close the file and broadcast to logged users
         }
     }
 
     private void processACK(ACKPack msg){
         if (!isLoggedIn()){
-            //@TODO error message
+            sendError((short)6, "Not Logged In!!");
             return;
         }
         lastAck=msg.getBlockNum();
-        //I am the server and received acknowledgment, therefor can send more data
         if (sendingReadData && lastAck==blockNum-1){
-            processRRQ();
+            sendFileData();
         }
         if (sendingDIRQ && lastAck==blockNum-1){
-            processDIRQ();
+            sendDIRQ();
         }
-        //I am the client and received acknowledgment, therefor can send more data
-        if (sendingWriteData && lastAck==blockNum-1){
-            //send more data using data packs
-        }
-        //add something for the client waiting on the ack for dis
     }
 
-    private void processERROR(ERRORPacket msg){
-        //clients only recieve those, no need to check if logged in
-        int errorCode=msg.getErrorCode();
-        String errorMsg=msg.getErrMsg();
-        System.out.println("Error " + errorCode);
+    //only errors we can recieve from clients are related to him unable to receive data
+    private void processERROR(){
+        sendingReadData=false;
+        sendingDIRQ=false;
     }
+
 
     private void processDIRQ(){
         if (!isLoggedIn()){
-            //@TODO error message
+            sendError((short)6, "Not Logged In!!");
             return;
         }
+        File listPath = new File("./Files");
+        String[] fileList = listPath.list();
+        if (fileList==null){
+            //no files in server, no point in opening the byteStream, etc
+            DATAPacket dataPacket = new DATAPacket((short)0,(short)1,null);
+            connections.send(ownerID,dataPacket);
+            return;
+        }
+        String bigStringOfNames = "";
+        for (String fileName : fileList){
+            bigStringOfNames +=(fileName+'\0');
+        }
+        byte[] stringOfNamesInBytes = bigStringOfNames.getBytes();
+        byteSteam = new ByteArrayInputStream(stringOfNamesInBytes);
+        sendingDIRQ=true;
+        sendDIRQ();
+    }
+
+    private void sendDIRQ(){
         byte[] data = new byte[512];
         int size = byteSteam.read(data,0,512);
         DATAPacket dataPacket = new DATAPacket((short)size,blockNum,data);
@@ -245,18 +244,17 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
 
     private void processLOGRQ(LOGRQPacket msg){
         if (isLoggedIn()){
-            //@TODO error message
+            sendError((short)7, "User already logged in");
             return;
         }
         String userName = msg.getUserName();
         loggedUsers.put(ownerID,userName);
-        ACKPack ackPack = new ACKPack((short)0);
-        connections.send(ownerID,ackPack);
+        sendACK((short)0);
     }
 
     private void processDELRQ(DELRQPacket msg){
         if (!isLoggedIn()){
-            //@TODO error message
+            sendError((short)6, "Not Logged In!!");
             return;
         }
         String fileName = msg.getFileName();
@@ -265,15 +263,11 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             File file = new File("./Files/" + fileName);
 
             if(file.delete()){
-                ACKPack ackPack = new ACKPack((short)0);
-                connections.send(ownerID, ackPack);
+                sendACK((short)0);
                 BCASTPacket bcastPacket = new BCASTPacket((byte)0, fileName);
                broadcast(bcastPacket);
             }else{
-                //@TODO actual error handling
-                short errorNum = 0; //placeholder
-                ERRORPacket errorPacket = new ERRORPacket(errorNum, "Nope"); //placeholder
-                connections.send(ownerID, errorPacket);
+                sendError((short)1, "File not found");
             }
 
         }catch(Exception e){
@@ -283,13 +277,11 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         }
     }
 
-    private void broadcast(BCASTPacket msg){
-        for (Integer connectionID : loggedUsers.keySet()){
-            connections.send(connectionID,msg);
-        }
-    }
 
-    private void processBCAST(BCASTPacket msg){ //only users receive these packets
+
+    /*
+    only users receive these packets
+    private void processBCAST(BCASTPacket msg){
         byte delOrAdd=msg.getDelOrAdd();
         String delOrAddPrint;
         if (delOrAdd==0)
@@ -299,14 +291,30 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         String fileName=msg.getFileName();
         System.out.println("BCAST " + delOrAddPrint + " " + fileName);
     }
+    */
 
     private void processDISC() {
         if (!isLoggedIn()){
-            //@TODO error message
+            sendError((short)6, "Not Logged In!!");
             return;
         }
         loggedUsers.remove(ownerID);
-        ACKPack ackPack = new ACKPack((short)0);
+        sendACK((short)0);
+    }
+
+    private void sendError(short errorNum, String errorMsg){
+        ERRORPacket errorPacket = new ERRORPacket(errorNum, errorMsg);
+        connections.send(ownerID,errorPacket);
+    }
+
+    private void broadcast(BCASTPacket msg){
+        for (Integer connectionID : loggedUsers.keySet()){
+            connections.send(connectionID,msg);
+        }
+    }
+
+    private void sendACK(short index){
+        ACKPack ackPack = new ACKPack(index);
         connections.send(ownerID,ackPack);
     }
 
