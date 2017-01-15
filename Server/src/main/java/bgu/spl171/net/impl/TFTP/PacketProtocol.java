@@ -3,11 +3,13 @@ package bgu.spl171.net.impl.TFTP;
 import bgu.spl171.net.api.bidi.BidiMessagingProtocol;
 import bgu.spl171.net.api.bidi.Connections;
 import bgu.spl171.net.impl.packets.*;
-import bgu.spl171.net.srv.bidi.ConnectionHandler;
+import com.sun.xml.internal.messaging.saaj.util.ByteInputStream;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Vector;
 
 /**
  * Created by Uzi the magnanimous, breaker of code and loader of IDEs. He who has tamed the java beast and crossed the narrow C(++).
@@ -17,9 +19,10 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     public static Map<Integer, String> loggedUsers;
 
     //for sending data to user and waiting for ack of last pack
-    private File fileBeingSent;
-    private boolean sendingData=false;
-    private int index=0;
+    private ByteArrayInputStream byteSteam;
+    private FileInputStream fileStream;
+    private boolean sendingReadData = false;
+    private boolean sendingDIRQ = false;
     private short blockNum=1;
     private int lastAck =0;
 
@@ -44,73 +47,88 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             case Packet.RRQ:
                 String fileName=((RRQPacket) msg).getFileName();
                 File reqFile = new File("./Files/" + fileName);
-                fileBeingSent=reqFile;
-                sendingData=true;
-                processRRQ(reqFile);
+                if(!reqFile.exists()){
+                    //@TODO error message
+                    return;
+                }
+                try {
+                    fileStream = new FileInputStream(reqFile);
+                }
+                catch (IOException e){
+                    e.printStackTrace();
+                 }
+                sendingReadData =true;
+                processRRQ();
                 break;
-            case Packet.WRQ:
+
+                case Packet.WRQ:
                 processWRQ((WRQPacket)msg);
                 break;
+
             case Packet.DATA:
                 processDATA((DATAPacket)msg);
                 break;
+
             case Packet.ACK:
                 processACK((ACKPack)msg);
                 break;
+
             case Packet.ERROR:
                 processERROR((ERRORPacket)msg);
                 break;
+
             case Packet.DIRQ:
-                processDIRQ((DIRQPacket)msg);
+                File listPath = new File("./Files");
+                File[] fileList = listPath.listFiles();
+                if (fileList==null){
+                    DATAPacket dataPacket = new DATAPacket((short)0,(short)0,null);
+                    connections.send(ownerID,dataPacket);
+                    return;
+                }
+                String nameList = "";
+                for (File file : fileList){
+                    nameList+=(file.getName()+'\0');
+                }
+                byte[] fileListInBytes=nameList.getBytes();
+                byteSteam = new ByteArrayInputStream(fileListInBytes);
+                sendingDIRQ=true;
+                processDIRQ();
                 break;
+
             case Packet.LOGRQ:
                 processLOGRQ((LOGRQPacket)msg);
                 break;
+
             case Packet.DELRQ:
                 processDELRQ((DELRQPacket)msg);
                 break;
+
             case Packet.BCAST:
                 processBCAST((BCASTPacket)msg);
                 break;
+
             case Packet.DISC:
                 processDISC();
                 break;
         }
     }
 
-    private void processRRQ(File reqFile){
-        if(!reqFile.exists()){
-            //@TODO error message
-            return;
-        }
-
-        long length = reqFile.length();
-
+    private void processRRQ() {
+        byte[] data = new byte[512];
         try {
-            if (index<length) {
-                InputStream in = new FileInputStream(reqFile);
-                byte[] data = new byte[512];
-
-                int size = in.read(data, index, index + 512);
-                DATAPacket dataPacket = new DATAPacket((short) size, blockNum, data);
-                connections.send(ownerID, dataPacket);
-
-                if (index>=length){
-                    index=0;
-                    blockNum=1;
-                    sendingData=false;
-                    fileBeingSent=null;
-                }
-                else {
-                    index += 512;
-                    blockNum++;
-                }
-                in.close();
+            int size = fileStream.read(data, 0, 512);
+            DATAPacket dataPacket = new DATAPacket((short) size, blockNum, data);
+            connections.send(ownerID, dataPacket);
+            if (fileStream.available() < 1) {
+                blockNum = 1;
+                sendingReadData = false;
+                fileStream.close();
+            } else {
+                blockNum++;
             }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-         catch (IOException e){
-             e.printStackTrace();
-         }
     }
 
     private void processWRQ(WRQPacket msg){
@@ -128,14 +146,18 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         int packetSize=msg.getPacketSize();
         int blockNum=msg.getBlockNum();
         byte[] data=msg.getData();
-
+        //goes with wrq and rrq
     }
 
     private void processACK(ACKPack msg){
         lastAck=msg.getBlockNum();
-        if (sendingData && lastAck==this.blockNum-1){
-            processRRQ(fileBeingSent);
+        if (sendingReadData && lastAck==blockNum-1){
+            processRRQ();
         }
+        if (sendingDIRQ && lastAck==blockNum-1){
+            processDIRQ();
+        }
+        //add something for the client waiting on the ack for dis
     }
 
     private void processERROR(ERRORPacket msg){
@@ -143,8 +165,24 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         String errorMsg=msg.getErrMsg();
     }
 
-    private void processDIRQ(DIRQPacket msg){
-
+    private void processDIRQ(){
+        byte[] data = new byte[512];
+        int size = byteSteam.read(data,0,512);
+        DATAPacket dataPacket = new DATAPacket((short)size,blockNum,data);
+        connections.send(ownerID,dataPacket);
+        if (byteSteam.available()<1){
+            blockNum=1;
+            sendingDIRQ=false;
+            try {
+                byteSteam.close();
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+        }
+        else{
+            blockNum++;
+        }
     }
 
     private void processLOGRQ(LOGRQPacket msg){
@@ -192,10 +230,15 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         }
     }
 
-    private void processBCAST(BCASTPacket msg){
+    private void processBCAST(BCASTPacket msg){ //only users receive these packets
         byte delOrAdd=msg.getDelOrAdd();
+        String delOrAddPrint;
+        if (delOrAdd==0)
+            {delOrAddPrint="del";}
+        else
+            {delOrAddPrint="add";}
         String fileName=msg.getFileName();
-        //print the message
+        System.out.println("BCAST " + delOrAddPrint + " " + fileName);
     }
 
     private void processDISC() {
