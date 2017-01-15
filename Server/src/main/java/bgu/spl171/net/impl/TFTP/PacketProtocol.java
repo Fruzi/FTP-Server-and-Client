@@ -3,13 +3,10 @@ package bgu.spl171.net.impl.TFTP;
 import bgu.spl171.net.api.bidi.BidiMessagingProtocol;
 import bgu.spl171.net.api.bidi.Connections;
 import bgu.spl171.net.impl.packets.*;
-import com.sun.xml.internal.messaging.saaj.util.ByteInputStream;
 
 import java.io.*;
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Vector;
 
 /**
  * Created by Uzi the magnanimous, breaker of code and loader of IDEs. He who has tamed the java beast and crossed the narrow C(++).
@@ -23,6 +20,10 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     private FileInputStream fileStream;
     private boolean sendingReadData = false;
     private boolean sendingDIRQ = false;
+    private boolean sendingWriteData = false;
+    private boolean recievingDIRQ = false;
+    private boolean recivingWriteData;
+    private File generatedFile;
     private short blockNum=1;
     private int lastAck =0;
 
@@ -62,8 +63,8 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
                 break;
 
                 case Packet.WRQ:
-                processWRQ((WRQPacket)msg);
-                break;
+                    processWRQ((WRQPacket)msg);
+                    break;
 
             case Packet.DATA:
                 processDATA((DATAPacket)msg);
@@ -123,7 +124,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             int size = fileStream.read(data, 0, 512);
             DATAPacket dataPacket = new DATAPacket((short) size, blockNum, data);
             connections.send(ownerID, dataPacket);
-            if (fileStream.available() < 1) {
+            if (size!=512) {
                 blockNum = 1;
                 sendingReadData = false;
                 fileStream.close();
@@ -140,14 +141,21 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             //@TODO error message
             return;
         }
-        String fileName=msg.getFileName();
-
-        /*
-            String fileName=reqFile.getName();
-            BCASTPacket bcastPacket = new BCASTPacket((byte)1,fileName);
-            broadcast(bcastPacket);
-         */
-
+        generatedFile=new File(msg.getFileName());
+        try{
+            if (generatedFile.createNewFile()){
+                recivingWriteData=true;
+                ACKPack ackPack = new ACKPack((short)0);
+                connections.send(ownerID,ackPack);
+            }
+            else {
+                generatedFile=null;
+                //@TODO error message
+            }
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
     }
 
     private void processDATA(DATAPacket msg){
@@ -158,7 +166,19 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         int packetSize=msg.getPacketSize();
         int blockNum=msg.getBlockNum();
         byte[] data=msg.getData();
-        //goes with wrq and rrq
+        if (packetSize!=512){
+            //this is the last packet
+        }
+        //I am either the server receiving data from a WRQ or the client receiving either DIRQ or RRQ
+        if (recivingWriteData){
+            //the server getting WRQ
+        }
+        if (recievingDIRQ){
+            //client getting Dir info
+        }
+        else {
+            //client receiving RRQ
+        }
     }
 
     private void processACK(ACKPack msg){
@@ -167,11 +187,16 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             return;
         }
         lastAck=msg.getBlockNum();
+        //I am the server and received acknowledgment, therefor can send more data
         if (sendingReadData && lastAck==blockNum-1){
             processRRQ();
         }
         if (sendingDIRQ && lastAck==blockNum-1){
             processDIRQ();
+        }
+        //I am the client and received acknowledgment, therefor can send more data
+        if (sendingWriteData && lastAck==blockNum-1){
+            //send more data using data packs
         }
         //add something for the client waiting on the ack for dis
     }
@@ -192,7 +217,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         int size = byteSteam.read(data,0,512);
         DATAPacket dataPacket = new DATAPacket((short)size,blockNum,data);
         connections.send(ownerID,dataPacket);
-        if (byteSteam.available()<1){
+        if (size!=512){
             blockNum=1;
             sendingDIRQ=false;
             try {
@@ -225,6 +250,8 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         }
         String userName = msg.getUserName();
         loggedUsers.put(ownerID,userName);
+        ACKPack ackPack = new ACKPack((short)0);
+        connections.send(ownerID,ackPack);
     }
 
     private void processDELRQ(DELRQPacket msg){
