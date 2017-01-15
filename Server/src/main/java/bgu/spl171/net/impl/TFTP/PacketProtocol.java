@@ -114,6 +114,10 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     }
 
     private void processRRQ() {
+        if (!isLoggedIn()){
+            //@TODO error message
+            return;
+        }
         byte[] data = new byte[512];
         try {
             int size = fileStream.read(data, 0, 512);
@@ -132,6 +136,10 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     }
 
     private void processWRQ(WRQPacket msg){
+        if (!isLoggedIn()){
+            //@TODO error message
+            return;
+        }
         String fileName=msg.getFileName();
 
         /*
@@ -143,6 +151,10 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     }
 
     private void processDATA(DATAPacket msg){
+        if (!isLoggedIn()){
+            //@TODO error message
+            return;
+        }
         int packetSize=msg.getPacketSize();
         int blockNum=msg.getBlockNum();
         byte[] data=msg.getData();
@@ -150,6 +162,10 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     }
 
     private void processACK(ACKPack msg){
+        if (!isLoggedIn()){
+            //@TODO error message
+            return;
+        }
         lastAck=msg.getBlockNum();
         if (sendingReadData && lastAck==blockNum-1){
             processRRQ();
@@ -161,11 +177,17 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     }
 
     private void processERROR(ERRORPacket msg){
+        //clients only recieve those, no need to check if logged in
         int errorCode=msg.getErrorCode();
         String errorMsg=msg.getErrMsg();
+        System.out.println("Error " + errorCode);
     }
 
     private void processDIRQ(){
+        if (!isLoggedIn()){
+            //@TODO error message
+            return;
+        }
         byte[] data = new byte[512];
         int size = byteSteam.read(data,0,512);
         DATAPacket dataPacket = new DATAPacket((short)size,blockNum,data);
@@ -185,21 +207,31 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         }
     }
 
-    private void processLOGRQ(LOGRQPacket msg){
-        String userName = msg.getUserName();
+    private boolean isLoggedIn(){
         if (loggedUsers==null){
             loggedUsers=new HashMap<>();
+            return false;
         }
-        for (String loggedUser: loggedUsers.values()) {
-            if (loggedUser.equals(userName)){
-                //@TODO create error
-                return;
-            }
+        for (int userID: loggedUsers.keySet()) {
+            if (userID==ownerID) {return true;}
         }
+        return false;
+    }
+
+    private void processLOGRQ(LOGRQPacket msg){
+        if (isLoggedIn()){
+            //@TODO error message
+            return;
+        }
+        String userName = msg.getUserName();
         loggedUsers.put(ownerID,userName);
     }
 
     private void processDELRQ(DELRQPacket msg){
+        if (!isLoggedIn()){
+            //@TODO error message
+            return;
+        }
         String fileName = msg.getFileName();
         try{
 
@@ -242,6 +274,10 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     }
 
     private void processDISC() {
+        if (!isLoggedIn()){
+            //@TODO error message
+            return;
+        }
         loggedUsers.remove(ownerID);
         ACKPack ackPack = new ACKPack((short)0);
         connections.send(ownerID,ackPack);
