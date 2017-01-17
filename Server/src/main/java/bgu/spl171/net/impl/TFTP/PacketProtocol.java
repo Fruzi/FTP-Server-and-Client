@@ -24,7 +24,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
 
     //for sending data to user and waiting for ack of last pack
     private ByteArrayInputStream byteSteam;
-    private FileInputStream fileStream;
+    private File reqFile=null;
     private boolean sendingReadData = false;
     private boolean sendingDIRQ = false;
     private File fileBeingReceived;
@@ -78,7 +78,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
                 break;
 
             case Packet.DELRQ:
-                processDELRQ((DELRQPacket)msg);
+                processDELRQ(((DELRQPacket)msg).getFileName());
                 break;
 
             case Packet.DISC:
@@ -91,18 +91,15 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     }
 
     private void processRRQ(String fileName){
-        File reqFile = new File(filesLocation + fileName);
-        if(!reqFile.exists()){
-            sendError((short)1, "File Not Found");
+        if (!isLoggedIn()){
+            sendError((short)6, "Not Logged In!!");
             return;
         }
-        try {
-            fileStream = new FileInputStream(reqFile);
+        reqFile = new File(filesLocation + fileName);
+        if(!reqFile.exists()) {
+            sendError((short) 1, "File Not Found");
+            return;
         }
-        catch (IOException e){
-            e.printStackTrace();
-        }
-        sendingReadData =true;
         sendFileData();
     }
 
@@ -113,13 +110,16 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         }
         byte[] data = new byte[512];
         try {
-            int size = fileStream.read(data, 0, 512);
+            FileInputStream fileInputStream = new FileInputStream(reqFile);
+            fileInputStream.skip((blockNum-1)*512);
+            int size = fileInputStream.read(data, 0, 512);
             DATAPacket dataPacket = new DATAPacket((short) size, blockNum, data);
             connections.send(ownerID, dataPacket);
+            fileInputStream.close();
             if (size!=512) {
                 blockNum = 1;
                 sendingReadData = false;
-                fileStream.close();
+                reqFile = null;
             } else {
                 blockNum++;
             }
@@ -135,22 +135,24 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         }
         fileBeingReceived =new File(tempFiles + fileName);
         //process if the file was already uploaded
-        for (File file : filesLocation.listFiles()){
-            if (file.getName().equals(fileName)) {
-                fileBeingReceived =null;
-                sendError((short)5, "File already exists");
+        //@TODO synchronize to prevent multiple uploads of same file
+        File[] listOfFiles = filesLocation.listFiles();
+        if (listOfFiles!=null) {
+            for (File file : listOfFiles) {
+                if (file.getName().equals(fileName)) {
+                    fileBeingReceived = null;
+                    sendError((short) 5, "File already exists");
+                }
             }
         }
-        try{
-            if (fileBeingReceived.createNewFile()){
-                sendACK((short)0);
+        try {
+            if (fileBeingReceived.createNewFile()) {
+                sendACK((short) 0);
+            } else {
+                fileBeingReceived = null;
+                sendError((short) 5, "File already exists");
             }
-            else {
-                fileBeingReceived =null;
-                sendError((short)5, "File already exists");
-            }
-        }
-        catch (IOException e){
+            } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -177,6 +179,8 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         }
         sendACK(blockNum);
         if (packetSize!=512){
+            //moved back from the temp folder to the main folder
+            fileBeingReceived.renameTo(new File(filesLocation + fileBeingReceived.getName()));
             broadcast((byte)1, fileBeingReceived.getName());
         }
     }
@@ -195,7 +199,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         }
     }
 
-    //only errors we can recieve from clients are related to him unable to receive data
+    //only errors we can receive from clients are related to him unable to receive data
     private void processERROR(){
         sendingReadData=false;
         sendingDIRQ=false;
@@ -208,6 +212,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             return;
         }
         File listPath = new File("./Files");
+        //making sure not to include the "temp" folder
         String[] fileList = listPath.list((file, name) -> file.isFile());
         if (fileList==null){
             //no files in server, no point in opening the byteStream, etc
@@ -270,16 +275,14 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         sendACK((short)0);
     }
 
-    private void processDELRQ(DELRQPacket msg){
+    private void processDELRQ(String fileName){
         if (!isLoggedIn()){
             sendError((short)6, "Not Logged In!!");
             return;
         }
-        String fileName = msg.getFileName();
         try{
 
-            File file = new File("./Files/" + fileName);
-
+            File file = new File(filesLocation + fileName);
             if(file.delete()){
                 sendACK((short)0);
                 broadcast((byte)0,fileName);
@@ -293,22 +296,6 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
 
         }
     }
-
-
-
-    /*
-    only users receive these packets
-    private void processBCAST(BCASTPacket msg){
-        byte delOrAdd=msg.getDelOrAdd();
-        String delOrAddPrint;
-        if (delOrAdd==0)
-            {delOrAddPrint="del";}
-        else
-            {delOrAddPrint="add";}
-        String fileName=msg.getFileName();
-        System.out.println("BCAST " + delOrAddPrint + " " + fileName);
-    }
-    */
 
     private void processDISC() {
         if (!isLoggedIn()){
