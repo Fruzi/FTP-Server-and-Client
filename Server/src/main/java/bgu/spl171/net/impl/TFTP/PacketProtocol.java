@@ -5,8 +5,12 @@ import bgu.spl171.net.api.bidi.Connections;
 import bgu.spl171.net.impl.packets.*;
 
 import java.io.*;
-import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 
 //@TODO make sure the error message sent is of the lowest possible value
 
@@ -16,20 +20,23 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 
 public class PacketProtocol implements BidiMessagingProtocol<Packet> {
-    private static Map<Integer, String> loggedUsers;
+    private static ConcurrentMap<Integer, String> loggedUsers;
+    private final static Object locKey = null;
 
-    private final File filesLocation = new File("./Files/");
-    private final File tempFiles = new File("./Files/Temp/");
+    private final File filesLocation = new File ("Files");
+    private final File tempFiles = new File ("Files/Temp");
+    private final short MAX_DATA_SIZE=512;
 
 
     //for sending data to user and waiting for ack of last pack
+    private FileInputStream fileInputStream;
     private ByteArrayInputStream byteSteam;
-    private File reqFile=null;
-    private boolean sendingReadData = false;
+    private File fileBeingReceived = null;
+    private boolean sendingFileData = false;
     private boolean sendingDIRQ = false;
-    private File fileBeingReceived;
     private short blockNum=1;
     private short lastAck =0;
+    private boolean finishedSendingPacks=false;
 
     private boolean terminateMe;
     private int ownerID;
@@ -74,7 +81,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
                 break;
 
             case Packet.LOGRQ:
-                processLOGRQ((LOGRQPacket)msg);
+                processLOGRQ(((LOGRQPacket)msg).getUserName());
                 break;
 
             case Packet.DELRQ:
@@ -95,11 +102,18 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             sendError((short)6, "Not Logged In!!");
             return;
         }
-        reqFile = new File(filesLocation + fileName);
+        File reqFile = new File(filesLocation + "/" + fileName);
         if(!reqFile.exists()) {
             sendError((short) 1, "File Not Found");
             return;
         }
+        try {
+            fileInputStream = new FileInputStream(reqFile);
+        }
+        catch(IOException e){
+            e.printStackTrace();
+        }
+        sendingFileData =true;
         sendFileData();
     }
 
@@ -108,18 +122,16 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             sendError((short)6, "Not Logged In!!");
             return;
         }
-        byte[] data = new byte[512];
+        byte[] data = new byte[MAX_DATA_SIZE];
         try {
-            FileInputStream fileInputStream = new FileInputStream(reqFile);
-            fileInputStream.skip((blockNum-1)*512);
-            int size = fileInputStream.read(data, 0, 512);
+            int size = fileInputStream.read(data, 0, MAX_DATA_SIZE);
             DATAPacket dataPacket = new DATAPacket((short) size, blockNum, data);
             connections.send(ownerID, dataPacket);
-            fileInputStream.close();
-            if (size!=512) {
-                blockNum = 1;
-                sendingReadData = false;
-                reqFile = null;
+            if (size!=MAX_DATA_SIZE) {
+                finishedSendingPacks=true;
+                sendingFileData = false;
+                fileInputStream.close();
+                fileInputStream=null;
             } else {
                 blockNum++;
             }
@@ -133,27 +145,29 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             sendError((short)6, "Not Logged In!!");
             return;
         }
-        fileBeingReceived =new File(tempFiles + fileName);
-        //process if the file was already uploaded
-        //@TODO synchronize to prevent multiple uploads of same file
-        File[] listOfFiles = filesLocation.listFiles();
-        if (listOfFiles!=null) {
-            for (File file : listOfFiles) {
-                if (file.getName().equals(fileName)) {
+        fileBeingReceived =new File(tempFiles +"/"+ fileName);
+        //process if the file was already
+        synchronized (locKey) {
+            File[] listOfFiles = filesLocation.listFiles();
+            if (listOfFiles != null) {
+                for (File file : listOfFiles) {
+                    if (file.getName().equals(fileName)) {
+                        fileBeingReceived = null;
+                        sendError((short) 5, "File already exists");
+                        return;
+                    }
+                }
+            }
+            try {
+                if (fileBeingReceived.createNewFile()) {
+                    sendACK((short) 0);
+                } else {
                     fileBeingReceived = null;
                     sendError((short) 5, "File already exists");
                 }
-            }
-        }
-        try {
-            if (fileBeingReceived.createNewFile()) {
-                sendACK((short) 0);
-            } else {
-                fileBeingReceived = null;
-                sendError((short) 5, "File already exists");
-            }
             } catch (IOException e) {
-            e.printStackTrace();
+                e.printStackTrace();
+            }
         }
     }
 
@@ -173,15 +187,18 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             FileOutputStream output = new FileOutputStream(fileBeingReceived, true);
             output.write(data);
             output.close();
+            sendACK(blockNum);
+            if (packetSize!=MAX_DATA_SIZE){
+                Path source = fileBeingReceived.toPath().toAbsolutePath();
+                Path destination = (new File(filesLocation +"/" + fileBeingReceived.getName())).toPath().toAbsolutePath();
+                Files.move(source,destination,ATOMIC_MOVE);
+                broadcast((byte)1, fileBeingReceived.getName());
+                fileBeingReceived=null;
+            }
         }
         catch (IOException e){
             e.printStackTrace();
-        }
-        sendACK(blockNum);
-        if (packetSize!=512){
-            //moved back from the temp folder to the main folder
-            fileBeingReceived.renameTo(new File(filesLocation + fileBeingReceived.getName()));
-            broadcast((byte)1, fileBeingReceived.getName());
+            sendError((short)3, "Insufficient memory in server");
         }
     }
 
@@ -191,18 +208,41 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             return;
         }
         lastAck=msg.getBlockNum();
-        if (sendingReadData && lastAck==blockNum-1){
+        if (lastAck!=blockNum-1){
+            sendError((short)0,"Incorrect block number");
+            return;
+        }
+        if (finishedSendingPacks){
+            blockNum=1;
+            finishedSendingPacks=false;
+        }
+        else if (sendingFileData){
             sendFileData();
         }
-        if (sendingDIRQ && lastAck==blockNum-1){
+        else if (sendingDIRQ){
             sendDIRQ();
+        }
+        else {
+            sendError((short)0, "Why you ackin' so cray-cray?");
         }
     }
 
     //only errors we can receive from clients are related to him unable to receive data
     private void processERROR(){
-        sendingReadData=false;
+        sendingFileData =false;
         sendingDIRQ=false;
+        try {
+            fileInputStream.close();
+            byteSteam.close();
+            byteSteam=null;
+            fileInputStream=null;
+            blockNum=1;
+            lastAck=0;
+
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
     }
 
 
@@ -211,9 +251,8 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             sendError((short)6, "Not Logged In!!");
             return;
         }
-        File listPath = new File("./Files");
         //making sure not to include the "temp" folder
-        String[] fileList = listPath.list((file, name) -> file.isFile());
+        String[] fileList = filesLocation.list((file, name) -> file.isFile());
         if (fileList==null){
             //no files in server, no point in opening the byteStream, etc
             DATAPacket dataPacket = new DATAPacket((short)0,(short)1,null);
@@ -235,15 +274,16 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             sendError((short)6, "Not Logged In!!");
             return;
         }
-        byte[] data = new byte[512];
-        int size = byteSteam.read(data,0,512);
+        byte[] data = new byte[MAX_DATA_SIZE];
+        int size = byteSteam.read(data,0,MAX_DATA_SIZE);
         DATAPacket dataPacket = new DATAPacket((short)size,blockNum,data);
         connections.send(ownerID,dataPacket);
-        if (size!=512){
-            blockNum=1;
+        if (size!=MAX_DATA_SIZE){
+            finishedSendingPacks=true;
             sendingDIRQ=false;
             try {
                 byteSteam.close();
+                byteSteam=null;
             }
             catch (IOException e){
                 e.printStackTrace();
@@ -265,38 +305,34 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         return false;
     }
 
-    private void processLOGRQ(LOGRQPacket msg){
+    private void processLOGRQ(String userName){
         if (isLoggedIn()){
             sendError((short)7, "User already logged in");
             return;
         }
-        String userName = msg.getUserName();
+        if (userName==null){
+            sendError((short)0, "Must supply a user name, FOOL");
+        }
         loggedUsers.put(ownerID,userName);
         sendACK((short)0);
     }
+
 
     private void processDELRQ(String fileName){
         if (!isLoggedIn()){
             sendError((short)6, "Not Logged In!!");
             return;
         }
-
-        File file = new File(filesLocation + fileName);
-    //@TODO synchronize so its impossible to delete while another user is downloading or simply change sendingData so it yells at you
-
-       /*
-        if (file==reqFile){
-            sendError((short)0, "soz, file is being downloaded by another user");
+        File file = new File(filesLocation + "/" + fileName);
+        if (!file.exists()){
+            sendError((short)1, "File not found – DELRQ of non-existing file");
             return;
         }
-        */
-
-        if(file.delete()){
-            sendACK((short)0);
-            broadcast((byte)0,fileName);
-        }
-        else{
-            sendError((short)1, "File not found");
+        if (file.delete()) {
+            sendACK((short) 0);
+            broadcast((byte) 0, fileName);
+        } else {
+            sendError((short) 2, " Access violation – File cannot be written, read or deleted");
         }
     }
 
