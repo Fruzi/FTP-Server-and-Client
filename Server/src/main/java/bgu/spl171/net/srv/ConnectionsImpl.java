@@ -6,6 +6,7 @@ import bgu.spl171.net.srv.bidi.ConnectionHandler;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by Uzi the Magnanimous, breaker of code and loader of IDEs. He who has tamed the java beast and crossed the narrow C(++).
@@ -46,7 +47,7 @@ public class ConnectionsImpl<T> implements Connections<T> {
 
     public void add(int connectionId, ConnectionHandler<T> handler) {
         if (connectionMap == null) {
-            connectionMap = new HashMap<>();
+            connectionMap = new ConcurrentHashMap<>();
         }
         connectionMap.put(connectionId, handler);
     }

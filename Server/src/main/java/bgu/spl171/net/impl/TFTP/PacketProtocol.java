@@ -5,7 +5,6 @@ import bgu.spl171.net.api.bidi.Connections;
 import bgu.spl171.net.impl.packets.*;
 
 import java.io.*;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -15,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Created by Uzi the magnanimous, breaker of code and loader of IDEs. He who has tamed the java beast and crossed the narrow C(++).
  * on this, 1/12/2017 the day of reckoning.
  */
+
 public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     private static Map<Integer, String> loggedUsers;
 
@@ -280,20 +280,23 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             sendError((short)6, "Not Logged In!!");
             return;
         }
-        try{
 
-            File file = new File(filesLocation + fileName);
-            if(file.delete()){
-                sendACK((short)0);
-                broadcast((byte)0,fileName);
-            }else{
-                sendError((short)1, "File not found");
-            }
+        File file = new File(filesLocation + fileName);
+    //@TODO synchronize so its impossible to delete while another user is downloading or simply change sendingData so it yells at you
 
-        }catch(Exception e){
+       /*
+        if (file==reqFile){
+            sendError((short)0, "soz, file is being downloaded by another user");
+            return;
+        }
+        */
 
-            e.printStackTrace();
-
+        if(file.delete()){
+            sendACK((short)0);
+            broadcast((byte)0,fileName);
+        }
+        else{
+            sendError((short)1, "File not found");
         }
     }
 
