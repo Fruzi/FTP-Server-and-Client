@@ -21,7 +21,7 @@ import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 
 public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     private static ConcurrentMap<Integer, String> loggedUsers;
-    private final static Object locKey = null;
+    private final static Object locKey = new Object();
 
     private final File filesLocation = new File ("Files");
     private final File tempFiles = new File ("Files/Temp");
@@ -57,38 +57,47 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         short opCode = msg.getOpCode();
         switch(opCode){
             case Packet.RRQ:
+                System.out.println("handling RRQ");
                 processRRQ(((RRQPacket)msg).getFileName());
                 break;
 
             case Packet.WRQ:
+                System.out.println("handling WRQ");
                 processWRQ(((WRQPacket)msg).getFileName());
                 break;
 
             case Packet.DATA:
+                System.out.println("handling DATA");
                 processDATA((DATAPacket)msg);
                 break;
 
             case Packet.ACK:
+                System.out.println("handling ACK");
                 processACK((ACKPack)msg);
                 break;
 
             case Packet.ERROR:
+                System.out.println("handling ERROR");
                 processERROR();
                 break;
 
             case Packet.DIRQ:
+                System.out.println("handling DIRQ");
                 processDIRQ();
                 break;
 
             case Packet.LOGRQ:
+                System.out.println("handling LOGRQ");
                 processLOGRQ(((LOGRQPacket)msg).getUserName());
                 break;
 
             case Packet.DELRQ:
+                System.out.println("handling DELRQ");
                 processDELRQ(((DELRQPacket)msg).getFileName());
                 break;
 
             case Packet.DISC:
+                System.out.println("handling DISC");
                 processDISC();
                 break;
 
@@ -132,9 +141,8 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
                 sendingFileData = false;
                 fileInputStream.close();
                 fileInputStream=null;
-            } else {
-                blockNum++;
             }
+            blockNum++;
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -247,7 +255,6 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
 
 
     private void processDIRQ(){
-        System.out.println("handling DIRQ");
         if (!isLoggedIn()){
             sendError((short)6, "Not Logged In!!");
             return;
@@ -321,9 +328,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
                 e.printStackTrace();
             }
         }
-        else{
-            blockNum++;
-        }
+        blockNum++;
     }
 
     private boolean isLoggedIn(){
