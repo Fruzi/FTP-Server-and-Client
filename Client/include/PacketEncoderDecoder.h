@@ -3,6 +3,7 @@
 #include "Packet.h"
 #include <string>
 #include <vector>
+#include <list>
 
 class PacketEncoderDecoder {
 private:
@@ -20,15 +21,14 @@ private:
 	static short bytesToShort(std::vector<char> bytesArr);
 	static std::vector<char> shortToBytes(short num);
 	
-	std::vector<char> encodeRRQPacket(Packet* packet) const;
-	std::vector<char> encodeWRQPacket(Packet* packet) const;
-	std::vector<char> encodeDATAPacket(Packet* packet);
-	std::vector<char> encodeACKPacket(Packet* packet);
-	std::vector<char> encodeERRORPacket(Packet* packet);
-	std::vector<char> encodeLOGRQPacket(Packet* packet) const;
-	std::vector<char> encodeDELRQPacket(Packet* packet) const;
+	void encodeRRQPacket(Packet* packet, std::vector<char>& result) const;
+	void encodeWRQPacket(Packet* packet, std::vector<char>& result) const;
+	void encodeDATAPacket(Packet* packet, std::vector<char>& result);
+	void encodeACKPacket(Packet* packet, std::vector<char>& result);
+	void encodeERRORPacket(Packet* packet, std::vector<char>& result);
+	void encodeLOGRQPacket(Packet* packet, std::vector<char>& result) const;
+	void encodeDELRQPacket(Packet* packet, std::vector<char>& result) const;
 
-	static int findFirstSpace(const std::string& input);
 	short decodeShortPacketSegment(short nextByte, short value);
 	std::string decodeStringMessage(char nextByte);
 	DATAPacket* decodeDATAPacket(char nextByte);

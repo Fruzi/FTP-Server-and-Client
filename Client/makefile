@@ -1,10 +1,15 @@
 CFLAGS:=-c -Wall -Weffc++ -g -std=c++11 -Iinclude
-LDFLAGS:=-lboost_system -lboost_locale
+LDFLAGS:=-lboost_system -lboost_locale -lboost_thread
 
 all: TFTPclient
-	g++ -o bin/TFTPclient bin/TFTPclient.o bin/connectionHandler.o bin/ServerTask.o bin/PacketEncoderDecoder.o bin/Packet.o bin/EncdecTest.o $(LDFLAGS) 
+	g++ -o bin/TFTPclient bin/TFTPclient.o bin/connectionHandler.o bin/ServerTask.o bin/PacketEncoderDecoder.o bin/Packet.o $(LDFLAGS) 
 
-TFTPclient: bin/TFTPclient.o bin/connectionHandler.o bin/ServerTask.o bin/PacketEncoderDecoder.o bin/Packet.o bin/EncdecTest.o
+test: TFTPTest
+	g++ -o bin/TFTPTest bin/Packet.o bin/PacketEncoderDecoder.o bin/EncdecTest.o $(LDFLAGS)
+	
+TFTPclient: bin/TFTPclient.o bin/connectionHandler.o bin/ServerTask.o bin/PacketEncoderDecoder.o bin/Packet.o
+
+TFTPTest: bin/Packet.o bin/PacketEncoderDecoder.o bin/EncdecTest.o
 
 bin/TFTPclient.o: src/TFTPclient.cpp
 	g++ $(CFLAGS) -o bin/TFTPclient.o src/TFTPclient.cpp

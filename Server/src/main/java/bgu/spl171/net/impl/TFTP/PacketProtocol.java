@@ -94,6 +94,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
 
             default:
                 sendError((short)4, "Illegal OP Code");
+                break;
         }
     }
 
@@ -124,10 +125,9 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         }
         byte[] data = new byte[MAX_DATA_SIZE];
         try {
-            int size = fileInputStream.read(data, 0, MAX_DATA_SIZE);
-            DATAPacket dataPacket = new DATAPacket((short) size, blockNum, data);
+            DATAPacket dataPacket = createDataPacket(false);
             connections.send(ownerID, dataPacket);
-            if (size!=MAX_DATA_SIZE) {
+            if (dataPacket.getPacketSize()!=MAX_DATA_SIZE) {
                 finishedSendingPacks=true;
                 sendingFileData = false;
                 fileInputStream.close();
@@ -247,13 +247,20 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
 
 
     private void processDIRQ(){
+        System.out.println("handling DIRQ");
         if (!isLoggedIn()){
             sendError((short)6, "Not Logged In!!");
             return;
         }
         //making sure not to include the "temp" folder
-        String[] fileList = filesLocation.list((file, name) -> file.isFile());
+        //String[] fileList = filesLocation.list((file, name) -> file.isFile());
+        String[] fileList = filesLocation.list();
+        System.out.println("The file are: ");
+        for (String string : fileList){
+            System.out.println(string);
+        }
         if (fileList==null){
+            System.out.println("No files found");
             //no files in server, no point in opening the byteStream, etc
             DATAPacket dataPacket = new DATAPacket((short)0,(short)1,null);
             connections.send(ownerID,dataPacket);
@@ -269,16 +276,41 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         sendDIRQ();
     }
 
+    private DATAPacket createDataPacket(boolean dirq){
+        byte[] data = new byte[MAX_DATA_SIZE];
+        int size=0;
+        try {
+            if (dirq) {
+                size = byteSteam.read(data, 0, MAX_DATA_SIZE);
+            }
+            else {
+                size = fileInputStream.read(data,0, MAX_DATA_SIZE);
+            }
+        } catch (java.lang.Exception exception) {
+            exception.printStackTrace();
+        }
+
+        if (size!=512){
+            byte[] littleData = new byte[size];
+            for (int i=0;i<size;i++){
+                littleData[i]=data[i];
+            }
+            DATAPacket dataPacket = new DATAPacket((short)size,blockNum,littleData);
+            return dataPacket;
+        }
+        DATAPacket dataPacket = new DATAPacket((short)size,blockNum,data);
+        return dataPacket;
+    }
+
     private void sendDIRQ(){
+        System.out.println("Sending Data");
         if (!isLoggedIn()){
             sendError((short)6, "Not Logged In!!");
             return;
         }
-        byte[] data = new byte[MAX_DATA_SIZE];
-        int size = byteSteam.read(data,0,MAX_DATA_SIZE);
-        DATAPacket dataPacket = new DATAPacket((short)size,blockNum,data);
+        DATAPacket dataPacket=createDataPacket(true);
         connections.send(ownerID,dataPacket);
-        if (size!=MAX_DATA_SIZE){
+        if (dataPacket.getPacketSize()!=MAX_DATA_SIZE){
             finishedSendingPacks=true;
             sendingDIRQ=false;
             try {
@@ -347,6 +379,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     }
 
     private void sendError(short errorNum, String errorMsg){
+        System.out.println("sending error");
         ERRORPacket errorPacket = new ERRORPacket(errorNum, errorMsg);
         connections.send(ownerID,errorPacket);
     }
@@ -359,8 +392,9 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     }
 
     private void sendACK(short index){
+        System.out.println("sending ACKPack");
         ACKPack ackPack = new ACKPack(index);
-        connections.send(ownerID,ackPack);
+        System.out.println(connections.send(ownerID,ackPack));
     }
 
 

@@ -28,6 +28,7 @@ bool ConnectionHandler::connect() {
         std::cerr << "Connection failed (Error: " << e.what() << ')' << std::endl;
         return false;
     }
+	std::cerr << "Connection successful" << std::endl;
     return true;
 }
  

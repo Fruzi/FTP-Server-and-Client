@@ -17,15 +17,13 @@ int main (int argc, char *argv[]) {
         return 1;
     }
 	
-	ServerTask task(*connectionHandler);
+	ServerTask task(connectionHandler);
 
 	boost::thread t1(&ServerTask::runKeyboardInput, &task);
 	boost::thread t2(&ServerTask::runServerInput, &task);
 
 	t1.join();
 	t2.join();
-
-	delete connectionHandler;
 
     return 0;
 }
