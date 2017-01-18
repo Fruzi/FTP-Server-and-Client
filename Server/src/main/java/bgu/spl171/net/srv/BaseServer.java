@@ -42,12 +42,12 @@ public abstract class BaseServer<T> implements Server<T> {
                 Socket clientSock = serverSock.accept();
 
                 BlockingConnectionHandler<T> handler = new BlockingConnectionHandler<>(
-                        connectionId++,
+                        connectionId,
                         clientSock,
                         encdecFactory.get(),
                         protocolFactory.get(),
                         connections);
-                connections.add(connectionId, handler);
+                connections.add(connectionId++, handler);
                 execute(handler);
             }
         } catch (IOException ex) {
