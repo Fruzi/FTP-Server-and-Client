@@ -3,6 +3,7 @@
 
 #include "connectionHandler.h"
 #include "PacketEncoderDecoder.h"
+#include <fstream>
 
 class ServerTask {
 private:
@@ -12,7 +13,11 @@ private:
 	short lastBlockSent_;
 	bool sendingData_;
 	bool sentDisc_;
-	static std::list<std::string> getStringsFromDIRQ(const DATAPacket& packet);
+	bool sentWrq_;
+	std::vector<char> dataCollection_;
+	std::string currentQueriedFile_;
+	std::ifstream fileInputStream_;
+	static std::list<std::string> getStringsFromDIRQ(const std::vector<char>& packet);
 
 public:
 	ServerTask(ConnectionHandler* handler);

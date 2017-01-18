@@ -254,7 +254,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         }
         //making sure not to include the "temp" folder
         //String[] fileList = filesLocation.list((file, name) -> file.isFile());
-        String[] fileList = filesLocation.list();
+        String[] fileList = filesLocation.list((file, name) -> (new File(file+ "/" + name)).isFile());
         System.out.println("The file are: ");
         for (String string : fileList){
             System.out.println(string);
