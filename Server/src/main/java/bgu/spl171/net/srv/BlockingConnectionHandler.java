@@ -49,7 +49,7 @@ public class BlockingConnectionHandler<T> implements ConnectionHandler<T>, Runna
                     protocol.process(nextMessage);
                 }
             }
-			if (protocol.shouldTerminate) {
+			if (protocol.shouldTerminate()) {
 				connections.disconnect(connectionId);
 			}
 

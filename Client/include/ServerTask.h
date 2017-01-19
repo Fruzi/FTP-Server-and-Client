@@ -20,7 +20,7 @@ private:
 
 	void printFilenamesFromData();
 	void writeToDisc(const std::vector<char>& toWrite) const;
-	std::vector<char> readFromDisc();
+	void readFromDisc();
 	bool sendPacket(Packet* packet);
 	bool sendDataFromDisc();
 

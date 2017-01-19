@@ -140,22 +140,11 @@ void ServerTask::writeToDisc(const std::vector<char>& toWrite) const {
 	fileOutputStream.close();
 }
 
-std::vector<char> ServerTask::readFromDisc() {
+void ServerTask::readFromDisc() {
 	char bytes[DATAPacket::MAX_DATA_SIZE];
-	fileInputStream_.read(bytes, sizeof(bytes) - 1);
-
+	fileInputStream_.read(bytes, sizeof(bytes));
 	int amountRead = fileInputStream_.gcount();
-	std::cout << amountRead << std::endl << std::flush; //for testing
-
-	std::vector<char> bytesRead;
-	bytesRead.insert(bytesRead.end(), bytes[0], bytes[amountRead]);
-	// for testing:
-	for (char byte : bytesRead) {
-		std::cout << std::to_string(byte) << std::flush;
-	}
-	std::cout << std::endl << std::flush;
-	//
-	return bytesRead;
+	dataCollection_.insert(dataCollection_.end(), bytes, bytes + amountRead);
 }
 
 bool ServerTask::sendPacket(Packet* packet) {
@@ -164,15 +153,15 @@ bool ServerTask::sendPacket(Packet* packet) {
 }
 
 bool ServerTask::sendDataFromDisc() {
-	std::vector<char> bytesRead(readFromDisc());
-	
-	DATAPacket dataPacket(bytesRead.size(), blockNum_++, bytesRead);
-	if (!sendPacket(&dataPacket)) {
-		return false;
+	readFromDisc();
+
+	if (dataCollection_.size() < DATAPacket::MAX_DATA_SIZE) {
+		finishedReadingData();
 	}
 
-	if (fileInputStream_.gcount() < DATAPacket::MAX_DATA_SIZE) {
-		finishedReadingData();
+	DATAPacket dataPacket(dataCollection_.size(), blockNum_++, dataCollection_);
+	if (!sendPacket(&dataPacket)) {
+		return false;
 	}
 	return true;
 }
