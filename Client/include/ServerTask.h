@@ -10,14 +10,23 @@ private:
 	ConnectionHandler* handler_;
 	PacketEncoderDecoder encDec_;
 	char receivingData_; // -1 - not receiving data, 0 - expecting file, 1 - expecting list of file names
-	short lastBlockSent_;
+	short blockNum_;
 	bool sendingData_;
 	bool sentDisc_;
-	bool sentWrq_;
+	bool finalBlockSent_;
 	std::vector<char> dataCollection_;
 	std::string currentQueriedFile_;
 	std::ifstream fileInputStream_;
-	static std::list<std::string> getStringsFromDIRQ(const std::vector<char>& packet);
+
+	void printFilenamesFromData();
+	void writeToDisc(const std::vector<char>& toWrite) const;
+	std::vector<char> readFromDisc();
+	bool sendPacket(Packet* packet);
+	bool sendDataFromDisc();
+
+	void finishedReadingData();
+
+	bool handleIncomingData(DATAPacket * packet);
 
 public:
 	ServerTask(ConnectionHandler* handler);

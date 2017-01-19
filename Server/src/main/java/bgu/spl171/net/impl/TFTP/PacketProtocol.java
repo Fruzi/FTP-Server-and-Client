@@ -380,7 +380,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         }
         loggedUsers.remove(ownerID);
         sendACK((short)0);
-        connections.disconnect(ownerID);
+        terminateMe = true;
     }
 
     private void sendError(short errorNum, String errorMsg){

@@ -2,7 +2,12 @@
 #include <memory>
 #include "Packet.h"
 
-ServerTask::ServerTask(ConnectionHandler* handler) : handler_(handler), encDec_(), receivingData_(-1), lastBlockSent_(0), sendingData_(false), sentDisc_(false), sentWrq_(false), dataCollection_(), currentQueriedFile_(), fileInputStream_() {}
+ServerTask::ServerTask(ConnectionHandler* handler) : handler_(handler), encDec_(), receivingData_(-1), blockNum_(1), sendingData_(false), sentDisc_(false), finalBlockSent_(true), dataCollection_(), currentQueriedFile_(), fileInputStream_() {}
+
+
+//@TODO: Fix write function (read from file)
+//@TODO: Fix Reactor disconnect issue
+//@TODO: Send errors
 
 void ServerTask::runKeyboardInput() {
 	const short bufsize = 1024;
@@ -21,7 +26,10 @@ void ServerTask::runKeyboardInput() {
 					currentQueriedFile_ = rrq->getFileName();
 					break;
 				} case Wrq: {
+					WRQPacket* wrq = dynamic_cast<WRQPacket*>(packet);
 					sendingData_ = true;
+					currentQueriedFile_ = wrq->getFileName();
+					fileInputStream_.open(currentQueriedFile_, std::ios::binary | std::ios::in);
 					break;
 				} case Dirq: {
 					receivingData_ = 1;
@@ -34,9 +42,9 @@ void ServerTask::runKeyboardInput() {
 					break;
 				}
 				}
-				std::vector<char> encodedPacket = encDec_.encode(packet);
+				bool success = sendPacket(packet);
 				delete packet;
-				if (!handler_->sendBytes(&encodedPacket[0], encodedPacket.size())) {
+				if (!success) {
 					return;
 				}
 			}
@@ -45,7 +53,7 @@ void ServerTask::runKeyboardInput() {
 }
 
 void ServerTask::runServerInput() {
-	while (!sentDisc_) {
+	while (true) {
 		char in;
 		if (!handler_->getBytes(&in, 1)) {
 			return;
@@ -53,7 +61,7 @@ void ServerTask::runServerInput() {
 		Packet* message = encDec_.decodeNextByte(in);
 		if (message) {
 			short opCode = message->getOpcode();
-			std::cout << "Packet with opcode " << opCode << " received" << std::endl << std::flush;
+			std::cout << "Packet with opcode " << opCode << " received" << std::endl << std::flush; // for testing
 			switch (opCode) {
 			case Data: {
 				if (receivingData_ == -1) {
@@ -62,44 +70,32 @@ void ServerTask::runServerInput() {
 					return;
 				}
 				DATAPacket* packet = dynamic_cast<DATAPacket*>(message);
-				std::vector<char> currentPacketData = packet->getData();
-				if (receivingData_ == 0) {
-					//write to disc
-					std::ofstream fileOutputStream;
-					fileOutputStream.open(currentQueriedFile_, std::ios::out);
-					fileOutputStream.open(currentQueriedFile_, std::ios::app);
-					fileOutputStream << &currentPacketData[0];
-					fileOutputStream.close();
-				} else {
-					dataCollection_.insert(dataCollection_.end(), currentPacketData.begin(), currentPacketData.end());
-
-				}
-				if (packet->getPacketSize() < DATAPacket::MAX_DATA_SIZE) {
-					 if (receivingData_ == 0) {
-						 std::cout << "RRQ " << currentQueriedFile_ << " complete" << std::endl << std::flush;
-					} else {
-						 std::list<std::string> fileList = getStringsFromDIRQ(currentPacketData);
-						for (std::string fileName : fileList) {
-							std::cout << fileName << std::endl << std::flush;
-						}
-						dataCollection_.clear();
-					}
-					receivingData_ = -1;
-				}
-				Packet* ackResponse = new ACKPacket(packet->getBlockNum());
-				std::vector<char> encodedPacket = encDec_.encode(ackResponse);
-				if (!handler_->sendBytes(&encodedPacket[0], encodedPacket.size())) {
+				bool success = handleIncomingData(packet);
+				delete message;
+				if (!success) {
 					return;
 				}
-				delete ackResponse;
 				break;
 			} case Ack: {
 				ACKPacket* ack = dynamic_cast<ACKPacket*>(message);
-				std::cout << "ACK " << ack->getBlockNum() << std::endl;
-
-				if (sentWrq_) {
-
+				if (ack->getBlockNum() != blockNum_ - 1) {
+					//send error
+					delete message;
+					continue;
 				}
+				std::cout << "ACK " << ack->getBlockNum() << std::endl << std::flush;
+				if (sentDisc_) {
+					delete message;
+					return;
+				}
+				if (sendingData_) {
+					std::cout << "sending data" << std::endl << std::flush; //for testing
+					if (!sendDataFromDisc()) {
+						delete message;
+						return;
+					}
+				}
+				delete message;
 				break;
 			} case Error: {
 				ERRORPacket* error = dynamic_cast<ERRORPacket*>(message);
@@ -107,7 +103,11 @@ void ServerTask::runServerInput() {
 				break;
 			} case Bcast: {
 				BCASTPacket* bcast = dynamic_cast<BCASTPacket*>(message);
-				std::cout << "BCAST " << bcast->getDelOrAdd() << " " << bcast->getFileName() << std::endl;
+				if (bcast->getDelOrAdd() == 0) {
+					std::cout << "BCAST del " << bcast->getFileName() << std::endl << std::flush;
+				} else {
+					std::cout << "BCAST add " << bcast->getFileName() << std::endl << std::flush;
+				}
 				break;
 			} default: {
 
@@ -118,20 +118,95 @@ void ServerTask::runServerInput() {
 	}
 }
 
-std::list<std::string> ServerTask::getStringsFromDIRQ(const std::vector<char>& dataArr) {
-	std::list<std::string> fileList;
+void ServerTask::printFilenamesFromData() {
 	char delimiter = '\0';
 	std::vector<char> currentString;
-	for (char byte : dataArr) {
+	for (char byte : dataCollection_) {
 		if (byte == delimiter) {
-			std::string str(currentString.begin(), currentString.end());
-			fileList.push_back(str);
+			std::string fileName(currentString.begin(), currentString.end());
+			std::cout << fileName << std::endl << std::flush;
 			currentString.clear();
 		} else {
 			currentString.push_back(byte);
 		}
 	}
-	return fileList;
+}
+
+void ServerTask::writeToDisc(const std::vector<char>& toWrite) const {
+	std::ofstream fileOutputStream;
+	fileOutputStream.open(currentQueriedFile_, std::ios::out | std::ios::binary | std::ios::app);
+	fileOutputStream.write(&toWrite[0], toWrite.size());
+	fileOutputStream.flush();
+	fileOutputStream.close();
+}
+
+std::vector<char> ServerTask::readFromDisc() {
+	char bytes[DATAPacket::MAX_DATA_SIZE];
+	fileInputStream_.read(bytes, sizeof(bytes) - 1);
+
+	int amountRead = fileInputStream_.gcount();
+	std::cout << amountRead << std::endl << std::flush; //for testing
+
+	std::vector<char> bytesRead;
+	bytesRead.insert(bytesRead.end(), bytes[0], bytes[amountRead]);
+	// for testing:
+	for (char byte : bytesRead) {
+		std::cout << std::to_string(byte) << std::flush;
+	}
+	std::cout << std::endl << std::flush;
+	//
+	return bytesRead;
+}
+
+bool ServerTask::sendPacket(Packet* packet) {
+	std::vector<char> encodedPacket = encDec_.encode(packet);
+	return handler_->sendBytes(&encodedPacket[0], encodedPacket.size());
+}
+
+bool ServerTask::sendDataFromDisc() {
+	std::vector<char> bytesRead(readFromDisc());
+	
+	DATAPacket dataPacket(bytesRead.size(), blockNum_++, bytesRead);
+	if (!sendPacket(&dataPacket)) {
+		return false;
+	}
+
+	if (fileInputStream_.gcount() < DATAPacket::MAX_DATA_SIZE) {
+		finishedReadingData();
+	}
+	return true;
+}
+
+void ServerTask::finishedReadingData() {
+	fileInputStream_.close();
+	sendingData_ = false;
+	finalBlockSent_ = true;
+	blockNum_ = 1;
+	std::cout << "WRQ " << currentQueriedFile_ << " complete" << std::endl << std::flush;
+	currentQueriedFile_.clear();
+}
+
+bool ServerTask::handleIncomingData(DATAPacket* packet) {
+	std::vector<char> currentPacketData = packet->getData();
+	if (receivingData_ == 0) {
+		//write to disc
+		std::ofstream fileOutputStream;
+		writeToDisc(currentPacketData);
+	} else {
+		dataCollection_.insert(dataCollection_.end(), currentPacketData.begin(), currentPacketData.end());
+	}
+	if (packet->getPacketSize() < DATAPacket::MAX_DATA_SIZE) {
+		if (receivingData_ == 0) {
+			std::cout << "RRQ " << currentQueriedFile_ << " complete" << std::endl << std::flush;
+			currentQueriedFile_.clear();
+		} else {
+			printFilenamesFromData();
+			dataCollection_.clear();
+		}
+		receivingData_ = -1;
+	}
+	ACKPacket ackResponse(packet->getBlockNum());
+	return sendPacket(&ackResponse);
 }
 
 ServerTask::~ServerTask() {

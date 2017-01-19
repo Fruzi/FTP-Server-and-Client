@@ -49,6 +49,9 @@ public class BlockingConnectionHandler<T> implements ConnectionHandler<T>, Runna
                     protocol.process(nextMessage);
                 }
             }
+			if (protocol.shouldTerminate) {
+				connections.disconnect(connectionId);
+			}
 
         } catch (IOException ex) {
             ex.printStackTrace();
