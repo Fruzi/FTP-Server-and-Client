@@ -24,7 +24,7 @@ private:
 	void writeToDisc(const std::vector<char>& toWrite) const;
 	//void readFromDisc();
 	std::vector<char> readFromDisc();
-	bool sendPacket(Packet* packet);
+	bool sendPacket(const Packet& packet);
 	bool sendDataFromDisc();
 
 	void finishedReadingData();

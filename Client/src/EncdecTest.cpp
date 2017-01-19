@@ -122,9 +122,9 @@ void EncdecTest::testDataDecode (PacketEncoderDecoder& encdec){
 
 void EncdecTest::testDataEncode (PacketEncoderDecoder& encdec){
     vector<char> b = {1,2,3,4,5};
-    DATAPacket *packet = new DATAPacket(5, 261, b);
+    DATAPacket packet(5, 261, b);
     vector<char> res = encdec.encode(packet);
-    cout<<"Encoding the packet " << packet->getOpcode() << " is the Opcode "<< packet->getPacketSize() << " is the packetSize " << packet->getBlockNum() << " is the Block Num " <<endl;
+    cout<<"Encoding the packet " << packet.getOpcode() << " is the Opcode "<< packet.getPacketSize() << " is the packetSize " << packet.getBlockNum() << " is the Block Num " <<endl;
     //cout<<"The data arr is " <<endl;
     //printArr(b);
     //cout<<"Output: "<<endl;
@@ -133,13 +133,12 @@ void EncdecTest::testDataEncode (PacketEncoderDecoder& encdec){
     cout<<"The output should be {0,3,0,5,1,5,1,2,3,4,5}"<<endl;
 	if (res == vector<char>({0, 3, 0, 5, 1, 5, 1, 2, 3, 4, 5 }))
 		cout << "success!" << endl;
-	delete packet;
 }
 
 void EncdecTest::testDISCEncode (PacketEncoderDecoder& encdec){
-	DISCPacket *packet = new DISCPacket();
+	DISCPacket packet;
     vector<char> res = encdec.encode(packet);
-    cout<<"Encoding the packet " << packet->getOpcode() << " is the Opcode"<<endl;
+    cout<<"Encoding the packet " << packet.getOpcode() << " is the Opcode"<<endl;
     //cout<<"Output: "<<endl;
 
     //printArr(*res); // Should be {0,10}
@@ -147,7 +146,6 @@ void EncdecTest::testDISCEncode (PacketEncoderDecoder& encdec){
 	if (res == vector<char>({ 0,10 }))
 		cout << "success!" << endl;
 
-	delete packet;
 }
 
 void EncdecTest::testBCastDecode (PacketEncoderDecoder& encdec){
@@ -168,53 +166,49 @@ void EncdecTest::testBCastDecode (PacketEncoderDecoder& encdec){
 }
 
 void EncdecTest::testBCastEncode (PacketEncoderDecoder& encdec){
-	BCASTPacket *packet = new BCASTPacket(1, "BCastStr");
+	BCASTPacket packet(1, "BCastStr");
     vector<char> res = encdec.encode(packet);
-    cout<<"Encoding the packet " << packet->getOpcode() << " is the Opcode " << packet->getDelOrAdd() << " is the deleted_or_added code " << packet->getFileName()<<endl;
+    cout<<"Encoding the packet " << packet.getOpcode() << " is the Opcode " << packet.getDelOrAdd() << " is the deleted_or_added code " << packet.getFileName()<<endl;
     //cout<<"Output: "<<endl;
 
     //printArr(*res); // Should be {0,9,1,66,67,97,115,116,83,116,114,0}
 	if (res == vector<char>({ 0,9,1,66,67,97,115,116,83,116,114,0 }))
 		cout << "success!" << endl;
 
-	delete packet;
 }
 
 void EncdecTest::testDELRQEncode (PacketEncoderDecoder& encdec){
-    DELRQPacket *packet = new DELRQPacket("Dana");
+    DELRQPacket packet("Dana");
     vector<char> res = encdec.encode(packet);
-    cout<<"Encoding the packet " << packet->getOpcode() << " Opcode " << packet->getFileName()<<endl;
+    cout<<"Encoding the packet " << packet.getOpcode() << " Opcode " << packet.getFileName()<<endl;
     cout<<"Output: "<<endl;
 
     //printArr(res); // Should be {0,8,68,97,110,97,0}
     cout<<"The output should be {0,8,68,97,110,97,0}"<<endl;
 
-	delete packet;
 }
 
 void EncdecTest::testLOGRQEncode (PacketEncoderDecoder& encdec){
-    LOGRQPacket *packet = new LOGRQPacket("Dana");
+    LOGRQPacket packet("Dana");
     vector<char> res = encdec.encode(packet);
-    cout<<"Encoding the packet " << packet->getOpcode() << " Opcode " << packet->getUserName()<<endl;
+    cout<<"Encoding the packet " << packet.getOpcode() << " Opcode " << packet.getUserName()<<endl;
     cout<<"Output: "<<endl;
 
     //printArr(res); // Should be {0,7,68,97,110,97,0}
     cout<<"The output should be {0,7,68,97,110,97,0}"<<endl;
 
-	delete packet;
 
 }
 
 void EncdecTest::testDIRQEncode (PacketEncoderDecoder& encdec){
-    DIRQPacket *packet = new DIRQPacket();
+    DIRQPacket packet;
     vector<char> res = encdec.encode(packet);
-    cout<<"Encoding the packet " << packet->getOpcode() << " is the Opcode"<<endl;
+    cout<<"Encoding the packet " << packet.getOpcode() << " is the Opcode"<<endl;
     cout<<"Output: "<<endl;
 
    // printArr(res); // Should be {0,6}
     cout<<"The output should be {0,6}"<<endl;
 
-	delete packet;
 }
 
 
@@ -237,9 +231,9 @@ void EncdecTest::testErrorDecode (PacketEncoderDecoder& encdec){
 
 void EncdecTest::testErrorEncode (PacketEncoderDecoder& encdec){
     cout << "I'm at the Error encode" << endl;
-	ERRORPacket *packet = new ERRORPacket(3604, "Error Kapara");
+	ERRORPacket packet(3604, "Error Kapara");
     vector<char> res = encdec.encode(packet);
-    cout<<"Encoding the packet " << packet->getOpcode() << " is the Opcode " << packet->getErrorCode() <<" is the error code " << packet->getErrorMessage()<<endl;
+    cout<<"Encoding the packet " << packet.getOpcode() << " is the Opcode " << packet.getErrorCode() <<" is the error code " << packet.getErrorMessage()<<endl;
     //cout<<"Output: "<<endl;
 
     //printArr(*res); // Should be {0,5,14,20 ,69,114 ,114,111,114,32,75,97,112,97,114,97 ,0}
@@ -247,31 +241,28 @@ void EncdecTest::testErrorEncode (PacketEncoderDecoder& encdec){
 	if (res == vector<char>({ 0,5,14,20,69,114,114,111,114,32,75,97,112,97,114,97,0 }))
 		cout << "success!" << endl;
 
-	delete packet;
 }
 
 void EncdecTest::testRRQEncode (PacketEncoderDecoder& encdec){
-    RRQPacket *packet = new RRQPacket("Dana");
+    RRQPacket packet("Dana");
     vector<char> res = encdec.encode(packet);
-    cout<<"Encoding the packet " << packet->getOpcode() << " Opcode " << packet->getFileName()<<endl;
+    cout<<"Encoding the packet " << packet.getOpcode() << " Opcode " << packet.getFileName()<<endl;
     cout<<"Output: "<<endl;
 
     //printArr(res); // Should be {0,1,68,97,110,97,0}
     cout<<"The output should be {0,1,68,97,110,97,0}"<<endl;
 
-	delete packet;
 }
 
 void EncdecTest::testWRQEncode (PacketEncoderDecoder& encdec){
-    WRQPacket *packet = new WRQPacket("Dana");
+    WRQPacket packet("Dana");
     vector<char> res = encdec.encode(packet);
-    cout<<"Encoding the packet " << packet->getOpcode() << " Opcode " << packet->getFileName()<<endl;
+    cout<<"Encoding the packet " << packet.getOpcode() << " Opcode " << packet.getFileName()<<endl;
     cout<<"Output: "<<endl;
 
     //printArr(res); // Should be {0,2,68,97,110,97,0}
     cout<<"The output should be {0,2,68,97,110,97,0}"<<endl;
 
-	delete packet;
 }
 
 void EncdecTest::testACKDecode (PacketEncoderDecoder& encdec){
@@ -290,9 +281,9 @@ void EncdecTest::testACKDecode (PacketEncoderDecoder& encdec){
 }
 
 void EncdecTest::testACKEncode (PacketEncoderDecoder& encdec){
-	ACKPacket *packet = new ACKPacket(3604); // bytesToShort({14,20})=(short)3604
+	ACKPacket packet(3604); // bytesToShort({14,20})=(short)3604
     vector<char> res = encdec.encode(packet);
-    cout<<"Encoding the packet " << packet->getOpcode() << " Opcode " << packet->getBlockNum()<<endl;
+    cout<<"Encoding the packet " << packet.getOpcode() << " Opcode " << packet.getBlockNum()<<endl;
     //cout<<"Output: "<<endl;
 
     //printArr(*res); // Should be {0,2,68,97,110,97,0}
@@ -300,7 +291,6 @@ void EncdecTest::testACKEncode (PacketEncoderDecoder& encdec){
 	if (res == vector<char>({0, 4, 14, 20}))
 		cout << "success!" << endl;
 
-	delete packet;
 }
 
 

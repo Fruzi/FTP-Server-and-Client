@@ -9,8 +9,8 @@ PacketEncoderDecoder::PacketEncoderDecoder() : opCode_(-1), packetSize_(-1), blo
 PacketEncoderDecoder::~PacketEncoderDecoder() {
 }
 
-std::vector<char> PacketEncoderDecoder::encode(Packet* packet) {
-	opCode_ = packet->getOpcode();
+std::vector<char> PacketEncoderDecoder::encode(const Packet& packet) {
+	opCode_ = packet.getOpcode();
 	std::vector<char> result(shortToBytes(opCode_));
 	
 	if (opCode_ == Rrq) {
@@ -32,22 +32,25 @@ std::vector<char> PacketEncoderDecoder::encode(Packet* packet) {
 	return result;
 }
 
-void PacketEncoderDecoder::encodeRRQPacket(Packet* packet, std::vector<char>& result) const {
-	std::string fileName = dynamic_cast<RRQPacket*>(packet)->getFileName();
+void PacketEncoderDecoder::encodeRRQPacket(const Packet& packet, std::vector<char>& result) const {
+	const RRQPacket& rrqPacket(dynamic_cast<const RRQPacket&>(packet));
+	std::string fileName = rrqPacket.getFileName();
 	std::copy(fileName.begin(), fileName.end(), std::back_inserter(result));
 	result.push_back('\0');
 }
 
-void PacketEncoderDecoder::encodeWRQPacket(Packet* packet, std::vector<char>& result) const {
-	std::string fileName = dynamic_cast<WRQPacket*>(packet)->getFileName();
+void PacketEncoderDecoder::encodeWRQPacket(const Packet& packet, std::vector<char>& result) const {
+	const WRQPacket& wrqPacket(dynamic_cast<const WRQPacket&>(packet));
+	std::string fileName = wrqPacket.getFileName();
 	std::copy(fileName.begin(), fileName.end(), std::back_inserter(result));
 	result.push_back('\0');
 }
 
-void PacketEncoderDecoder::encodeDATAPacket(Packet* packet, std::vector<char>& result) {
-	packetSize_ = dynamic_cast<DATAPacket*>(packet)->getPacketSize();
-	blockNum_ = dynamic_cast<DATAPacket*>(packet)->getBlockNum();
-	data_ = dynamic_cast<DATAPacket*>(packet)->getData();
+void PacketEncoderDecoder::encodeDATAPacket(const Packet& packet, std::vector<char>& result) {
+	const DATAPacket& dataPacket(dynamic_cast<const DATAPacket&>(packet));
+	packetSize_ = dataPacket.getPacketSize();
+	blockNum_ = dataPacket.getBlockNum();
+	data_ = dataPacket.getData();
 	std::vector<char> packetSizeBytes = shortToBytes(packetSize_);
 	std::vector<char> blockNumBytes = shortToBytes(blockNum_);
 	result.insert(result.end(), packetSizeBytes.begin(), packetSizeBytes.end());
@@ -56,29 +59,33 @@ void PacketEncoderDecoder::encodeDATAPacket(Packet* packet, std::vector<char>& r
 	data_.clear();
 }
 
-void PacketEncoderDecoder::encodeACKPacket(Packet* packet, std::vector<char>& result) {
-	blockNum_ = dynamic_cast<ACKPacket*>(packet)->getBlockNum();
+void PacketEncoderDecoder::encodeACKPacket(const Packet& packet, std::vector<char>& result) {
+	const ACKPacket& ackPacket(dynamic_cast<const ACKPacket&>(packet));
+	blockNum_ = ackPacket.getBlockNum();
 	std::vector<char> blockNumBytes = shortToBytes(blockNum_);
 	result.insert(result.end(), blockNumBytes.begin(), blockNumBytes.end());
 }
 
-void PacketEncoderDecoder::encodeERRORPacket(Packet* packet, std::vector<char>& result) {
-	errorCode_ = dynamic_cast<ERRORPacket*>(packet)->getErrorCode();
+void PacketEncoderDecoder::encodeERRORPacket(const Packet& packet, std::vector<char>& result) {
+	const ERRORPacket& errorPacket(dynamic_cast<const ERRORPacket&>(packet));
+	errorCode_ = errorPacket.getErrorCode();
 	std::vector<char> errorCodeBytes = shortToBytes(errorCode_);
-	std::string errorMessage = dynamic_cast<ERRORPacket*>(packet)->getErrorMessage();
+	std::string errorMessage = errorPacket.getErrorMessage();
 	result.insert(result.end(), errorCodeBytes.begin(), errorCodeBytes.end());
 	std::copy(errorMessage.begin(), errorMessage.end(), std::back_inserter(result));
 	result.push_back('\0');
 }
 
-void PacketEncoderDecoder::encodeLOGRQPacket(Packet* packet, std::vector<char>& result) const {
-	std::string userName = dynamic_cast<LOGRQPacket*>(packet)->getUserName();
+void PacketEncoderDecoder::encodeLOGRQPacket(const Packet& packet, std::vector<char>& result) const {
+	const LOGRQPacket& logrqPacket(dynamic_cast<const LOGRQPacket&>(packet));
+	std::string userName = logrqPacket.getUserName();
 	std::copy(userName.begin(), userName.end(), std::back_inserter(result));
 	result.push_back('\0');
 }
 
-void PacketEncoderDecoder::encodeDELRQPacket(Packet* packet, std::vector<char>& result) const {
-	std::string fileName = dynamic_cast<DELRQPacket*>(packet)->getFileName();
+void PacketEncoderDecoder::encodeDELRQPacket(const Packet& packet, std::vector<char>& result) const {
+	const DELRQPacket& delrqPacket(dynamic_cast<const DELRQPacket&>(packet));
+	std::string fileName = delrqPacket.getFileName();
 	std::copy(fileName.begin(), fileName.end(), std::back_inserter(result));
 	result.push_back('\0');
 }
@@ -107,9 +114,6 @@ Packet* PacketEncoderDecoder::decodeFromKeyboardInput(const std::string& input) 
 		}
 		if (type == "DELRQ") {
 			return new DELRQPacket(argument);
-		}
-		if (type == "DATA") {
-			return new DATAPacket(6, 1, { 1, 2, 3, 4, 5, 6 });
 		}
 	}
 	return nullptr;
@@ -226,7 +230,7 @@ void PacketEncoderDecoder::resetFields() {
 }
 
 
-short PacketEncoderDecoder::bytesToShort(std::vector<char> bytesArr) {
+short PacketEncoderDecoder::bytesToShort(const std::vector<char>& bytesArr) {
 	short result = (bytesArr[0] & 0xff) << 8;
 	result += bytesArr[1] & 0xff;
 	return result;
