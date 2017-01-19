@@ -14,13 +14,16 @@ private:
 	bool sendingData_;
 	bool sentDisc_;
 	bool finalBlockSent_;
+	//std::vector<char> downloadDataCollection_;
+	//std::vector<char> uploadDataCollection_;
 	std::vector<char> dataCollection_;
 	std::string currentQueriedFile_;
 	std::ifstream fileInputStream_;
 
 	void printFilenamesFromData();
 	void writeToDisc(const std::vector<char>& toWrite) const;
-	void readFromDisc();
+	//void readFromDisc();
+	std::vector<char> readFromDisc();
 	bool sendPacket(Packet* packet);
 	bool sendDataFromDisc();
 

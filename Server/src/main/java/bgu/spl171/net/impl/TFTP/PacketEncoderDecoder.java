@@ -4,6 +4,8 @@ import bgu.spl171.net.api.MessageEncoderDecoder;
 import bgu.spl171.net.impl.echo.LineMessageEncoderDecoder;
 import bgu.spl171.net.impl.packets.*;
 
+import java.util.Arrays;
+
 /**
  * Created by Uzi the magnanimous, breaker of code and leader of IDES. He who has tamed the java beast and crossed the narrow C(++).
  * on this, 1/12/2017 the day of reckoning.
@@ -113,9 +115,15 @@ public class PacketEncoderDecoder implements MessageEncoderDecoder<Packet> {
             }
             if (blockNumber == -1) {
                 blockNumber = decodeShortPacketSegment(nextByte, blockNumber);
+                if (blockNumber != -1 && dataPacketSize == 0) {
+                    DATAPacket packet = new DATAPacket(dataPacketSize, blockNumber, dataBytes);
+                    resetFields();
+                    dataBytes = null;
+                    return packet;
+                }
             } else {
                 dataBytes[dataBytesIndex++] = nextByte;
-                if (dataBytesIndex == dataBytes.length) {
+                if (dataBytesIndex == dataPacketSize) {
                     DATAPacket packet = new DATAPacket(dataPacketSize, blockNumber, dataBytes);
                     resetFields();
                     dataBytes = null;
@@ -278,6 +286,10 @@ public class PacketEncoderDecoder implements MessageEncoderDecoder<Packet> {
         blockNumber = -1;
         errorCode = -1;
         deletedAdded = -1;
+        dataBytes = null;
+        shortByteArr = null;
+        shortByteArrIndex = 0;
+        dataBytesIndex = 0;
     }
 
     private short bytesToShort(byte[] byteArr) {

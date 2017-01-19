@@ -108,12 +108,14 @@ Packet* PacketEncoderDecoder::decodeFromKeyboardInput(const std::string& input) 
 		if (type == "DELRQ") {
 			return new DELRQPacket(argument);
 		}
+		if (type == "DATA") {
+			return new DATAPacket(6, 1, { 1, 2, 3, 4, 5, 6 });
+		}
 	}
 	return nullptr;
 }
 
 Packet* PacketEncoderDecoder::decodeNextByte(char nextByte) {
-	std::cout << "decoding a byte" << std::endl << std::flush;
 	if (opCode_ == -1) {
 		opCode_ = decodeShortPacketSegment(nextByte, opCode_);
 	} else {
@@ -146,11 +148,11 @@ short PacketEncoderDecoder::decodeShortPacketSegment(short nextByte, short value
 
 std::string PacketEncoderDecoder::decodeStringMessage(char nextByte) {
 	std::string result;
+	data_.push_back(nextByte);
 	if (nextByte == '\0') {
 		result = std::string(data_.begin(), data_.end());
 		data_.clear();
 	}
-	data_.push_back(nextByte);
 	return result;
 }
 
@@ -159,13 +161,16 @@ DATAPacket* PacketEncoderDecoder::decodeDATAPacket(char nextByte) {
 		packetSize_ = decodeShortPacketSegment(nextByte, packetSize_);
 	} else if (blockNum_ == -1) {
 		blockNum_ = decodeShortPacketSegment(nextByte, blockNum_);
+		if (packetSize_ == 0) {
+			DATAPacket* packet = new DATAPacket(packetSize_, blockNum_, data_);
+			resetFields();
+			return packet;
+		}
 	} else {
-		if (packetSize_ > 0)
-			data_.push_back(nextByte);
+		data_.push_back(nextByte);
 		if (data_.size() == packetSize_) {
 			DATAPacket* packet = new DATAPacket(packetSize_, blockNum_, data_);
 			resetFields();
-			data_.clear();
 			return packet;
 		}
 	}
@@ -216,6 +221,8 @@ void PacketEncoderDecoder::resetFields() {
 	blockNum_ = -1;
 	errorCode_ = -1;
 	delOrAdd_ = -1;
+	data_.clear();
+	shortByteArr_.clear();
 }
 
 

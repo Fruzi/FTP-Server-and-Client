@@ -67,12 +67,10 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
                 break;
 
             case Packet.DATA:
-                System.out.println("handling DATA");
                 processDATA((DATAPacket)msg);
                 break;
 
             case Packet.ACK:
-                System.out.println("handling ACK");
                 processACK((ACKPack)msg);
                 break;
 
@@ -132,7 +130,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             sendError((short)6, "Not Logged In!!");
             return;
         }
-        byte[] data = new byte[MAX_DATA_SIZE];
+       // byte[] data = new byte[MAX_DATA_SIZE];
         try {
             DATAPacket dataPacket = createDataPacket(false);
             connections.send(ownerID, dataPacket);
@@ -180,6 +178,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     }
 
     private void processDATA(DATAPacket msg){
+        System.out.println("starting to process data");
         if (!isLoggedIn()){
             sendError((short)6, "Not Logged In!!");
             return;
@@ -189,6 +188,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             return;
         }
         int packetSize=msg.getPacketSize();
+        System.out.println("Data packet's block num " + msg.getBlockNum() + " with size " + packetSize);
         short blockNum=msg.getBlockNum();
         byte[] data=msg.getData();
         try{
@@ -211,6 +211,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     }
 
     private void processACK(ACKPack msg){
+        System.out.println("got ACK num "+ msg.getBlockNum());
         if (!isLoggedIn()){
             sendError((short)6, "Not Logged In!!");
             return;
@@ -239,6 +240,10 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     private void processERROR(){
         sendingFileData =false;
         sendingDIRQ=false;
+        if (fileBeingReceived!=null){
+            fileBeingReceived.delete();
+            fileBeingReceived=null;
+        }
         try {
             fileInputStream.close();
             byteSteam.close();
@@ -262,10 +267,6 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         //making sure not to include the "temp" folder
         //String[] fileList = filesLocation.list((file, name) -> file.isFile());
         String[] fileList = filesLocation.list((file, name) -> (new File(file+ "/" + name)).isFile());
-        System.out.println("The file are: ");
-        for (String string : fileList){
-            System.out.println(string);
-        }
         if (fileList==null){
             System.out.println("No files found");
             //no files in server, no point in opening the byteStream, etc
@@ -273,6 +274,11 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             connections.send(ownerID,dataPacket);
             return;
         }
+        //-------------------
+        for (String fileName: fileList){
+            System.out.println(fileName);
+        }
+        ////---------------------- for testing
         String bigStringOfNames = "";
         for (String fileName : fileList){
             bigStringOfNames +=(fileName+'\0');
@@ -310,12 +316,13 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     }
 
     private void sendDIRQ(){
-        System.out.println("Sending Data");
+        System.out.println("Sending Data, block num " + blockNum);
         if (!isLoggedIn()){
             sendError((short)6, "Not Logged In!!");
             return;
         }
         DATAPacket dataPacket=createDataPacket(true);
+        System.out.println("sent "+dataPacket.getPacketSize()+" bytes");
         connections.send(ownerID,dataPacket);
         if (dataPacket.getPacketSize()!=MAX_DATA_SIZE){
             finishedSendingPacks=true;
@@ -384,12 +391,13 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     }
 
     private void sendError(short errorNum, String errorMsg){
-        System.out.println("sending error");
+        System.out.println("sending error number " + errorNum);
         ERRORPacket errorPacket = new ERRORPacket(errorNum, errorMsg);
         connections.send(ownerID,errorPacket);
     }
 
     private void broadcast(Byte delOrAdd, String filename){
+        System.out.println("Broadcasting");
         BCASTPacket bcastPacket = new BCASTPacket(delOrAdd, filename);
         for (Integer connectionID : loggedUsers.keySet()){
             connections.send(connectionID,bcastPacket);
@@ -397,7 +405,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     }
 
     private void sendACK(short index){
-        System.out.println("sending ACKPack");
+        System.out.println("sending ACKPack number " + index);
         ACKPack ackPack = new ACKPack(index);
         System.out.println(connections.send(ownerID,ackPack));
     }
