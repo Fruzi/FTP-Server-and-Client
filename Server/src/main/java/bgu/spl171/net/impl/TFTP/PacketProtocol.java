@@ -262,8 +262,6 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             }
             byte[] stringOfNamesInBytes = bigStringOfNames.getBytes();
             byteSteam = new ByteArrayInputStream(stringOfNamesInBytes);
-            sendingDIRQ=true;
-            sendDIRQ();
         }
         sendingDIRQ=true;
         sendDIRQ();
