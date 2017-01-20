@@ -1,34 +1,32 @@
-CFLAGS:=-c -Wall -Weffc++ -g -std=c++11 -Iinclude
-LDFLAGS:=-lboost_system -lboost_locale -lboost_thread
+PROGRAM = TFTPclient
 
-all: TFTPclient
-	g++ -o bin/TFTPclient bin/TFTPclient.o bin/connectionHandler.o bin/ServerTask.o bin/PacketEncoderDecoder.o bin/Packet.o $(LDFLAGS) 
+SRCS = Packet.cpp \
+	connectionHandler.cpp \
+	PacketEncoderDecoder.cpp \
+	ServerTask.cpp
 
-test: TFTPTest
-	g++ -o bin/TFTPTest bin/Packet.o bin/PacketEncoderDecoder.o bin/EncdecTest.o $(LDFLAGS)
-	
-TFTPclient: bin/TFTPclient.o bin/connectionHandler.o bin/ServerTask.o bin/PacketEncoderDecoder.o bin/Packet.o
+SRCDIR = src
+BINDIR = bin
 
-TFTPTest: bin/Packet.o bin/PacketEncoderDecoder.o bin/EncdecTest.o
+OBJS = $(SRCS:%.cpp=$(BINDIR)/%.o)
 
-bin/TFTPclient.o: src/TFTPclient.cpp
-	g++ $(CFLAGS) -o bin/TFTPclient.o src/TFTPclient.cpp
+CC = g++
+CFLAGS =-Wall -Weffc++ -g -std=c++11
+LFLAGS =-lboost_system -lboost_locale -lboost_thread
 
-bin/connectionHandler.o: src/connectionHandler.cpp
-	g++ $(CFLAGS) -o bin/connectionHandler.o src/connectionHandler.cpp
+INCLUDES = -Iinclude
+LIBS =
 
-bin/ServerTask.o: src/ServerTask.cpp
-	g++ $(CFLAGS) -o bin/ServerTask.o src/ServerTask.cpp
+.PHONY: all
+all: $(PROGRAM)
 
-bin/PacketEncoderDecoder.o: src/PacketEncoderDecoder.cpp
-	g++ $(CFLAGS) -o bin/PacketEncoderDecoder.o src/PacketEncoderDecoder.cpp
-	
-bin/Packet.o: src/Packet.cpp
-	g++ $(CFLAGS) -o bin/Packet.o src/Packet.cpp
+$(PROGRAM): $(OBJS) $(BINDIR)/TFTPclient.o
+	$(CC) $(LIBS) -o $(BINDIR)/$(PROGRAM) $+ $(LFLAGS)
 
-bin/EncdecTest.o: src/EncdecTest.cpp
-	g++ $(CFLAGS) -o bin/EncdecTest.o src/EncdecTest.cpp
-	
+$(BINDIR)/%.o: $(SRCDIR)/%.cpp
+	@mkdir -p $(BINDIR)
+	$(CC) -c $(CFLAGS) $(INCLUDES) -o $@ $<
+
 .PHONY: clean
 clean:
-	rm -f bin/*
+	rm -rf $(BINDIR)/*
