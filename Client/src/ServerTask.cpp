@@ -16,15 +16,15 @@ void ServerTask::runKeyboardInput() {
 				short opCode = packet->getOpcode();
 				switch (opCode) {
 				case Rrq: {
-					RRQPacket* rrq = dynamic_cast<RRQPacket*>(packet);
+					const RRQPacket rrq(dynamic_cast<const RRQPacket&>(*packet));
 					receivingData_ = 0;
-					currentQueriedFile_ = rrq->getFileName();
+					currentQueriedFile_ = rrq.getFileName();
 					break;
 				} case Wrq: {
-					WRQPacket* wrq = dynamic_cast<WRQPacket*>(packet);
+					const WRQPacket wrq(dynamic_cast<const WRQPacket&>(*packet));
 					sendingData_ = true;
 					finalBlockSent_ = false;
-					currentQueriedFile_ = wrq->getFileName();
+					currentQueriedFile_ = wrq.getFileName();
 					fileInputStream_.open(currentQueriedFile_, std::ios::binary);
 					break;
 				} case Dirq: {
@@ -64,20 +64,20 @@ void ServerTask::runServerInput() {
 					delete message;
 					return;
 				}
-				bool success = handleIncomingData(dynamic_cast<const DATAPacket&>(*message));
+				bool success = handleIncomingData(dynamic_cast<DATAPacket&>(*message));
 				if (!success) {
 					delete message;
 					return;
 				}
 				break;
 			} case Ack: {
-				ACKPacket* ack = dynamic_cast<ACKPacket*>(message);
-				if (ack->getBlockNum() != blockNum_ - 1) {
+				ACKPacket ack(dynamic_cast<ACKPacket&>(*message));
+				if (ack.getBlockNum() != blockNum_ - 1) {
 					sendPacket(ERRORPacket(0, ""));
 					delete message;
 					continue;
 				}
-				std::cout << "ACK " << ack->getBlockNum() << std::endl << std::flush;
+				std::cout << "ACK " << ack.getBlockNum() << std::endl << std::flush;
 				if (finalBlockSent_) {
 					std::cout << "WRQ " << currentQueriedFile_ << " complete" << std::endl << std::flush;
 					blockNum_ = 1;
@@ -95,16 +95,16 @@ void ServerTask::runServerInput() {
 				}
 				break;
 			} case Error: {
-				ERRORPacket* error = dynamic_cast<ERRORPacket*>(message);
-				std::cout << "Error " << error->getErrorCode() << std::endl << std::flush;
+				ERRORPacket error(dynamic_cast<ERRORPacket&>(*message));
+				std::cout << "Error " << error.getErrorCode() << std::endl << std::flush;
 				sendingData_ = false;
 				receivingData_ = -1;
 				fileInputStream_.close();
 				break;
 			} case Bcast: {
-				BCASTPacket* bcast = dynamic_cast<BCASTPacket*>(message);
-				std::string deloradd = bcast->getDelOrAdd() == 0 ? "del" : "add";
-				std::cout << "BCAST " << deloradd << " " << bcast->getFileName() << std::endl << std::flush;
+				BCASTPacket bcast(dynamic_cast<BCASTPacket&>(*message));
+				std::string deloradd = bcast.getDelOrAdd() == 0 ? "del" : "add";
+				std::cout << "BCAST " << deloradd << " " << bcast.getFileName() << std::endl << std::flush;
 				break;
 			} default: {
 
@@ -179,7 +179,7 @@ void ServerTask::finishedReadingData() {
 }
 
 bool ServerTask::handleIncomingData(const DATAPacket& packet) {
-	std::vector<char> currentPacketData = packet.getData();
+	const std::vector<char> currentPacketData = packet.getData();
 	if (receivingData_ == 0) {
 		std::ofstream fileOutputStream;
 		writeToDisc(currentPacketData);

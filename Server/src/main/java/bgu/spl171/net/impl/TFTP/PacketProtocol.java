@@ -381,7 +381,9 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         } catch (java.lang.Exception exception) {
             exception.printStackTrace();
         }
-
+		if (size == -1) {
+			size = 0;
+		}
         if (size!=MAX_DATA_SIZE){
             byte[] littleData = new byte[size];
             System.arraycopy(data,0,littleData,0,size);
