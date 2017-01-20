@@ -366,8 +366,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
 
     private DATAPacket createDataPacket(short packetType){
         if (packetType==EMPTY_DATA){
-            byte[] data = {};
-            return new DATAPacket((short)0,blockNum, data);
+            return new DATAPacket((short)0,blockNum, new byte[]{});
         }
         byte[] data = new byte[MAX_DATA_SIZE];
         int size=0;
