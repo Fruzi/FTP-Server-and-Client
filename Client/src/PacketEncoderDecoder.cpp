@@ -109,7 +109,6 @@ Packet* PacketEncoderDecoder::decodeFromKeyboardInput(const std::string& input) 
 			return new WRQPacket(argument);
 		}
 		if (type == "LOGRQ") {
-			std::cout << "decoded logrq from keyboard" << std::endl << std::flush;
 			return new LOGRQPacket(argument);
 		}
 		if (type == "DELRQ") {

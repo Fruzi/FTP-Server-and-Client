@@ -2,12 +2,7 @@
 #include <memory>
 #include "Packet.h"
 
-ServerTask::ServerTask(ConnectionHandler* handler) : handler_(handler), encDec_(), receivingData_(-1), blockNum_(1), sendingData_(false), sentDisc_(false), finalBlockSent_(true), dataCollection_(), currentQueriedFile_(), fileInputStream_() {}
-
-
-//@TODO: Fix write function (read from file)
-//@TODO: Fix Reactor disconnect issue
-//@TODO: Send errors
+ServerTask::ServerTask(ConnectionHandler* handler) : handler_(handler), encDec_(), receivingData_(-1), blockNum_(1), sendingData_(false), sentDisc_(false), finalBlockSent_(false), dataCollection_(), currentQueriedFile_(), fileInputStream_() {}
 
 void ServerTask::runKeyboardInput() {
 	const short bufsize = 1024;
@@ -62,7 +57,6 @@ void ServerTask::runServerInput() {
 		Packet* message = encDec_.decodeNextByte(in);
 		if (message) {
 			short opCode = message->getOpcode();
-			std::cout << "Packet with opcode " << opCode << " received" << std::endl << std::flush; // for testing
 			switch (opCode) {
 			case Data: {
 				if (receivingData_ == -1) {
@@ -86,7 +80,9 @@ void ServerTask::runServerInput() {
 				}
 				std::cout << "ACK " << ack->getBlockNum() << std::endl << std::flush;
 				if (finalBlockSent_) {
+					std::cout << "WRQ " << currentQueriedFile_ << " complete" << std::endl << std::flush;
 					blockNum_ = 1;
+					finalBlockSent_ = false;
 				}
 				if (sentDisc_) {
 					delete message;
@@ -126,8 +122,7 @@ void ServerTask::printFilenamesFromData() {
 	std::vector<char> currentString;
 	for (char byte : dataCollection_) {
 		if (byte == delimiter) {
-			std::string fileName(currentString.begin(), currentString.end());
-			std::cout << fileName << std::endl << std::flush;
+			std::cout << std::string(currentString.begin(), currentString.end()) << std::endl << std::flush;
 			currentString.clear();
 		} else {
 			currentString.push_back(byte);
@@ -145,23 +140,17 @@ void ServerTask::writeToDisc(const std::vector<char>& toWrite) const {
 
 std::vector<char> ServerTask::readFromDisc() {
 	char bytes[DATAPacket::MAX_DATA_SIZE];
-	std::cout << "starting to read from file " << currentQueriedFile_ << std::endl << std::flush;
 	fileInputStream_.read(bytes, sizeof(bytes));
 
 	int amountRead = fileInputStream_.gcount();
-	std::cout << amountRead << std::endl << std::flush; //for testing
 
 	std::vector<char> bytesRead(bytes, bytes + amountRead);
-	// for testing:
-	//std::cout << std::string(bytesRead.begin(), bytesRead.end()) << std::endl << std::flush;
 	
-	//
 	return bytesRead;
 }
 
 bool ServerTask::sendPacket(const Packet& packet) {
 	std::vector<char> encodedPacket = encDec_.encode(packet);
-	std::cout << "sending " << packet.getOpcode() << " packet " << encodedPacket.size() << " bytes " << currentQueriedFile_ << std::endl << std::flush;
 	return handler_->sendBytes(&encodedPacket[0], encodedPacket.size());
 }
 
@@ -187,19 +176,19 @@ void ServerTask::finishedReadingData() {
 	sendingData_ = false;
 	finalBlockSent_ = true;
 	//blockNum_ = 1;
-	std::cout << "WRQ " << currentQueriedFile_ << " complete" << std::endl << std::flush;
 	currentQueriedFile_.clear();
 }
 
 bool ServerTask::handleIncomingData(DATAPacket* packet) {
 	std::vector<char> currentPacketData = packet->getData();
 	if (receivingData_ == 0) {
-		//write to disc
 		std::ofstream fileOutputStream;
 		writeToDisc(currentPacketData);
 	} else {
 		dataCollection_.insert(dataCollection_.end(), currentPacketData.begin(), currentPacketData.end());
 	}
+	ACKPacket ackResponse(packet->getBlockNum());
+	bool success = sendPacket(ackResponse);
 	if (packet->getPacketSize() < DATAPacket::MAX_DATA_SIZE) {
 		if (receivingData_ == 0) {
 			std::cout << "RRQ " << currentQueriedFile_ << " complete" << std::endl << std::flush;
@@ -210,8 +199,8 @@ bool ServerTask::handleIncomingData(DATAPacket* packet) {
 		}
 		receivingData_ = -1;
 	}
-	ACKPacket ackResponse(packet->getBlockNum());
-	return sendPacket(ackResponse);
+	
+	return success;
 }
 
 ServerTask::~ServerTask() {
