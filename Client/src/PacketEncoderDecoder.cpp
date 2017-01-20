@@ -164,7 +164,7 @@ DATAPacket* PacketEncoderDecoder::decodeDATAPacket(char nextByte) {
 		packetSize_ = decodeShortPacketSegment(nextByte, packetSize_);
 	} else if (blockNum_ == -1) {
 		blockNum_ = decodeShortPacketSegment(nextByte, blockNum_);
-		if (packetSize_ == 0) {
+		if (blockNum_ != -1 && packetSize_ == 0) {
 			DATAPacket* packet = new DATAPacket(packetSize_, blockNum_, data_);
 			resetFields();
 			return packet;

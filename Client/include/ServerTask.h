@@ -29,7 +29,7 @@ private:
 
 	void finishedReadingData();
 
-	bool handleIncomingData(DATAPacket * packet);
+	bool handleIncomingData(const DATAPacket& packet);
 
 public:
 	ServerTask(ConnectionHandler* handler);

@@ -283,12 +283,13 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         if (dataPacket.getPacketSize()!=MAX_DATA_SIZE){
             finishedSendingPacks=true;
             sendingDIRQ=false;
-            try {
-                byteSteam.close();
-                byteSteam=null;
-            }
-            catch (IOException e){
-                e.printStackTrace();
+            if (byteSteam != null) {
+                try {
+                    byteSteam.close();
+                    byteSteam = null;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
         blockNum++;

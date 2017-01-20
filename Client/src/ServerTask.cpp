@@ -6,7 +6,7 @@ ServerTask::ServerTask(ConnectionHandler* handler) : handler_(handler), encDec_(
 
 void ServerTask::runKeyboardInput() {
 	const short bufsize = 1024;
-	while (!sentDisc_) {
+	while (true) {
 		char buf[bufsize];
 		std::cin.getline(buf, bufsize);
 		std::string input(buf);
@@ -64,8 +64,7 @@ void ServerTask::runServerInput() {
 					delete message;
 					return;
 				}
-				DATAPacket* packet = dynamic_cast<DATAPacket*>(message);
-				bool success = handleIncomingData(packet);
+				bool success = handleIncomingData(dynamic_cast<const DATAPacket&>(*message));
 				if (!success) {
 					delete message;
 					return;
@@ -97,7 +96,7 @@ void ServerTask::runServerInput() {
 				break;
 			} case Error: {
 				ERRORPacket* error = dynamic_cast<ERRORPacket*>(message);
-				std::cout << "Error " << error->getErrorCode() << " " << error->getErrorMessage() << std::endl;
+				std::cout << "Error " << error->getErrorCode() << std::endl << std::flush;
 				sendingData_ = false;
 				receivingData_ = -1;
 				fileInputStream_.close();
@@ -142,7 +141,7 @@ std::vector<char> ServerTask::readFromDisc() {
 	char bytes[DATAPacket::MAX_DATA_SIZE];
 	fileInputStream_.read(bytes, sizeof(bytes));
 
-	int amountRead = fileInputStream_.gcount();
+	std::streamsize amountRead = fileInputStream_.gcount();
 
 	std::vector<char> bytesRead(bytes, bytes + amountRead);
 	
@@ -179,17 +178,17 @@ void ServerTask::finishedReadingData() {
 	currentQueriedFile_.clear();
 }
 
-bool ServerTask::handleIncomingData(DATAPacket* packet) {
-	std::vector<char> currentPacketData = packet->getData();
+bool ServerTask::handleIncomingData(const DATAPacket& packet) {
+	std::vector<char> currentPacketData = packet.getData();
 	if (receivingData_ == 0) {
 		std::ofstream fileOutputStream;
 		writeToDisc(currentPacketData);
 	} else {
 		dataCollection_.insert(dataCollection_.end(), currentPacketData.begin(), currentPacketData.end());
 	}
-	ACKPacket ackResponse(packet->getBlockNum());
+	ACKPacket ackResponse(packet.getBlockNum());
 	bool success = sendPacket(ackResponse);
-	if (packet->getPacketSize() < DATAPacket::MAX_DATA_SIZE) {
+	if (packet.getPacketSize() < DATAPacket::MAX_DATA_SIZE) {
 		if (receivingData_ == 0) {
 			std::cout << "RRQ " << currentQueriedFile_ << " complete" << std::endl << std::flush;
 			currentQueriedFile_.clear();
