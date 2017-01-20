@@ -1,4 +1,4 @@
-package bgu.spl171.net.impl.echo;
+package bgu.spl171.net.impl.TFTP;
 
 import bgu.spl171.net.api.MessageEncoderDecoder;
 import java.nio.charset.StandardCharsets;

@@ -1,14 +1,10 @@
 package bgu.spl171.net.impl.TFTP;
 
 import bgu.spl171.net.api.MessageEncoderDecoder;
-import bgu.spl171.net.impl.echo.LineMessageEncoderDecoder;
 import bgu.spl171.net.impl.packets.*;
 
-import java.util.Arrays;
-
 /**
- * Created by Uzi the magnanimous, breaker of code and leader of IDES. He who has tamed the java beast and crossed the narrow C(++).
- * on this, 1/12/2017 the day of reckoning.
+ * Implementation of the MessageEncoderDecoder used to encode and decode data transmitted through TCP/IP communication.
  */
 public class PacketEncoderDecoder implements MessageEncoderDecoder<Packet> {
 

@@ -12,16 +12,13 @@ import java.util.concurrent.ConcurrentMap;
 
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 
-
 /**
- * Created by Uzi the magnanimous, breaker of code and loader of IDEs. He who has tamed the java beast and crossed the narrow C(++).
- * on this, 1/12/2017 the day of reckoning.
+ * Implementation of the given BidiMessagingProtocol, used to support peer 2 peer communication.
  */
-
 public class PacketProtocol implements BidiMessagingProtocol<Packet> {
+
     private static ConcurrentMap<String, Integer> loggedUsers;
     private final static Object locKey = new Object();
-
 
     private final File filesLocation = new File ("Files");
     private final File tempFiles = new File ("Files/Temp");
@@ -29,7 +26,6 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     private final short EMPTY_DATA=0;
     private final short DIRQ_DATA=1;
     private final short FILE_DATA=2;
-
 
     private FileInputStream fileInputStream;
     private ByteArrayInputStream byteSteam;
@@ -45,6 +41,9 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     private String userName;
     private Connections<Packet> connections;
 
+    /**
+     * Constructor
+     */
     public PacketProtocol() {
         terminateMe = false;
     }

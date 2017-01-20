@@ -1,18 +1,25 @@
 package bgu.spl171.net.impl.packets;
 
 /**
- * Created by Uzi the magnanimous, breaker of code and leader of IDES. He who has tamed the java beast and crossed the narrow C(++).
- on this, 1/12/2017 the day of reckoning.
+ * Delete Request Packet
  */
 public class DELRQPacket extends Packet {
+
     private String fileName;
 
-
-    public DELRQPacket(String userName) {
-        opCode=8;
-        this.fileName = userName;
+    /**
+     * Constructor
+     * @param fileName The name of the file to be deleted by the server
+     */
+    public DELRQPacket(String fileName) {
+        opCode = DELRQ;
+        this.fileName = fileName;
     }
 
+    /**
+     * Getter for the file name
+     * @return the file name
+     */
     public String getFileName() {
         return fileName;
     }

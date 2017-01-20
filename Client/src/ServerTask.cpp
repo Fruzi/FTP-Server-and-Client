@@ -80,6 +80,7 @@ void ServerTask::runServerInput() {
 				std::cout << "ACK " << ack.getBlockNum() << std::endl << std::flush;
 				if (finalBlockSent_) {
 					std::cout << "WRQ " << currentQueriedFile_ << " complete" << std::endl << std::flush;
+					currentQueriedFile_.clear();
 					blockNum_ = 1;
 					finalBlockSent_ = false;
 				}
@@ -174,8 +175,6 @@ void ServerTask::finishedReadingData() {
 	fileInputStream_.close();
 	sendingData_ = false;
 	finalBlockSent_ = true;
-	//blockNum_ = 1;
-	currentQueriedFile_.clear();
 }
 
 bool ServerTask::handleIncomingData(const DATAPacket& packet) {

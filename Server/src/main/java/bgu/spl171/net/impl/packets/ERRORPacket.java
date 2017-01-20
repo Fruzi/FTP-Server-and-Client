@@ -1,24 +1,36 @@
 package bgu.spl171.net.impl.packets;
 
 /**
- * Created by Uzi the magnanimous, breaker of code and leader of IDES. He who has tamed the java beast and crossed the narrow C(++).
- on this, 1/12/2017 the day of reckoning.
+ * Error Packet
  */
 public class ERRORPacket extends Packet {
+
     private short errorCode;
     private String errMsg;
 
-
+    /**
+     * Constructor
+     * @param errorCode The error code
+     * @param errMsg The error message
+     */
     public ERRORPacket(short errorCode, String errMsg) {
-        opCode=5;
+        opCode = ERROR;
         this.errorCode = errorCode;
         this.errMsg = errMsg;
     }
 
+    /**
+     * Getter for the error code
+     * @return the error code
+     */
     public short getErrorCode() {
         return errorCode;
     }
 
+    /**
+     * Getter for the error message
+     * @return the error message
+     */
     public String getErrMsg() {
         return errMsg;
     }

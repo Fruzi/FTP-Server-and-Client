@@ -1,20 +1,25 @@
 package bgu.spl171.net.impl.packets;
 
-import bgu.spl171.net.impl.TFTP.PacketProtocol;
-
 /**
- * Created by Uzi the magnanimous, breaker of code and leader of IDES. He who has tamed the java beast and crossed the narrow C(++).
- on this, 1/12/2017 the day of reckoning.
+ * Login Request Packet
  */
 public class LOGRQPacket extends Packet {
+
     private String userName;
 
-
+    /**
+     * Constructor
+     * @param userName The name of the user who wishes to log in
+     */
     public LOGRQPacket(String userName) {
-        opCode=7;
+        opCode = LOGRQ;
         this.userName = userName;
     }
 
+    /**
+     * Getter for the username
+     * @return the username
+     */
     public String getUserName() {
         return userName;
     }

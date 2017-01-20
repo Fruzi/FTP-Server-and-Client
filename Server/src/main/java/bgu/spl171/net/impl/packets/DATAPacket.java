@@ -1,32 +1,47 @@
 package bgu.spl171.net.impl.packets;
 
 /**
- * Created by Uzi the magnanimous, breaker of code and leader of IDES. He who has tamed the java beast and crossed the narrow C(++).
- on this, 1/12/2017 the day of reckoning.
+ * Data Packet
  */
 public class DATAPacket extends Packet {
+
     private short packetSize;
     private short blockNum;
-    public static final int MAX_DATA_SIZE = 512;
     private byte[] data;
 
+    /**
+     * Constructor
+     * @param packetSize This packet's data array size
+     * @param blockNum This data packet's number in the current data transmission
+     * @param data The actual data
+     */
     public DATAPacket(short packetSize, short blockNum, byte[] data) {
-        opCode = 3;
+        opCode = DATA;
         this.packetSize = packetSize;
         this.blockNum = blockNum;
         this.data = data;
-        //might want to change to shallow copy
-        //System.arraycopy(data,0,this.data,0,packetSize);
     }
 
+    /**
+     * Getter for the packet size
+     * @return the size of the data array
+     */
     public short getPacketSize() {
         return packetSize;
     }
 
+    /**
+     * Getter for this packet's number
+     * @return this packet's block number in the current data transmission
+     */
     public short getBlockNum() {
         return blockNum;
     }
 
+    /**
+     * Getter for this packet's actual data
+     * @return the packet's byte array
+     */
     public byte[] getData() {
         return data;
     }

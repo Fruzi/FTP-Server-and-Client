@@ -1,17 +1,25 @@
 package bgu.spl171.net.impl.packets;
 
 /**
- * Created by Uzi the magnanimous, breaker of code and leader of IDES. He who has tamed the java beast and crossed the narrow C(++).
- on this, 1/12/2017 the day of reckoning.
+ * Acknowledge Packet
  */
 public class ACKPack extends Packet {
+
     private short blockNum;
 
+    /**
+     * Constructor
+     * @param blockNum The data block number confirmed by this ACK Packet
+     */
     public ACKPack(short blockNum) {
-        opCode=4;
+        opCode = ACK;
         this.blockNum = blockNum;
     }
 
+    /**
+     * Getter for the packet's block number
+     * @return this packet's block number
+     */
     public short getBlockNum() {
         return blockNum;
     }
