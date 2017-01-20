@@ -12,7 +12,6 @@ import java.util.concurrent.ConcurrentMap;
 
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 
-//@TODO make sure the error message sent is of the lowest possible value
 
 /**
  * Created by Uzi the magnanimous, breaker of code and loader of IDEs. He who has tamed the java beast and crossed the narrow C(++).
@@ -27,6 +26,9 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
     private final File filesLocation = new File ("Files");
     private final File tempFiles = new File ("Files/Temp");
     private final short MAX_DATA_SIZE=512;
+    private final short EMPTY_DATA=0;
+    private final short DIRQ_DATA=1;
+    private final short FILE_DATA=2;
 
 
     private FileInputStream fileInputStream;
@@ -125,7 +127,7 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             return;
         }
         try {
-            DATAPacket dataPacket = createDataPacket(false);
+            DATAPacket dataPacket = createDataPacket(FILE_DATA);
             connections.send(ownerID, dataPacket);
             if (dataPacket.getPacketSize()!=MAX_DATA_SIZE) {
                 finishedSendingPacks=true;
@@ -145,7 +147,6 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             return;
         }
         fileBeingReceived =new File(tempFiles +"/"+ fileName);
-        //process if the file was already
         synchronized (locKey) {
             File[] listOfFiles = filesLocation.listFiles();
             if (listOfFiles != null) {
@@ -254,17 +255,16 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             return;
         }
         String[] fileList = filesLocation.list((file, name) -> (new File(file+ "/" + name)).isFile());
-        if (fileList==null || fileList.length==0){
-            DATAPacket dataPacket = new DATAPacket((short)0,(short)1,null);
-            connections.send(ownerID,dataPacket);
-            return;
+        if (fileList!=null && fileList.length>0) {
+            String bigStringOfNames = "";
+            for (String fileName : fileList) {
+                bigStringOfNames += (fileName + '\0');
+            }
+            byte[] stringOfNamesInBytes = bigStringOfNames.getBytes();
+            byteSteam = new ByteArrayInputStream(stringOfNamesInBytes);
+            sendingDIRQ=true;
+            sendDIRQ();
         }
-        String bigStringOfNames = "";
-        for (String fileName : fileList){
-            bigStringOfNames +=(fileName+'\0');
-        }
-        byte[] stringOfNamesInBytes = bigStringOfNames.getBytes();
-        byteSteam = new ByteArrayInputStream(stringOfNamesInBytes);
         sendingDIRQ=true;
         sendDIRQ();
     }
@@ -274,7 +274,13 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
             sendError((short)6, "Not Logged In!!");
             return;
         }
-        DATAPacket dataPacket=createDataPacket(true);
+        DATAPacket dataPacket;
+        if (byteSteam==null){
+            dataPacket=createDataPacket(EMPTY_DATA);
+        }
+        else{
+            dataPacket=createDataPacket(DIRQ_DATA);
+        }
         connections.send(ownerID,dataPacket);
         if (dataPacket.getPacketSize()!=MAX_DATA_SIZE){
             finishedSendingPacks=true;
@@ -292,14 +298,14 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
 
 
     private void processLOGRQ(String userName){
-        if (isLoggedIn()){
-            sendError((short)7, "User already logged in");
-            return;
-        }
         if (userName==null){
             sendError((short)0, "Must supply a user name, FOOL");
+            return;
         }
-        loggedUsers.putIfAbsent(userName, ownerID);
+        if (isLoggedIn() || loggedUsers.putIfAbsent(userName, ownerID) != null) {
+            sendError((short) 7, "User already logged in");
+            return;
+        }
         this.userName=userName;
         sendACK((short)0);
     }
@@ -360,14 +366,18 @@ public class PacketProtocol implements BidiMessagingProtocol<Packet> {
         connections.send(ownerID,ackPack);
     }
 
-    private DATAPacket createDataPacket(boolean dirq){
+    private DATAPacket createDataPacket(short packetType){
+        if (packetType==EMPTY_DATA){
+            byte[] data = {};
+            return new DATAPacket((short)0,blockNum, data);
+        }
         byte[] data = new byte[MAX_DATA_SIZE];
         int size=0;
         try {
-            if (dirq) {
+            if (packetType==DIRQ_DATA) {
                 size = byteSteam.read(data, 0, MAX_DATA_SIZE);
             }
-            else {
+            else { //packetType==FILE_DATA
                 size = fileInputStream.read(data,0, MAX_DATA_SIZE);
             }
         } catch (java.lang.Exception exception) {
