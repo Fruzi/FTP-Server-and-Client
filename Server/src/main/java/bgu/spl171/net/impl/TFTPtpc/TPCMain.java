@@ -11,8 +11,6 @@ import bgu.spl171.net.srv.Server;
 public class TPCMain {
 
     public static void main(String[] args) {
-        //@TODO: Add a file database as a shared server object, like in NewsFeedServerMain,
-        //@TODO: and send it to the protocol constructor
 
         Server.threadPerClient(Integer.parseInt(args[0]),
                 PacketProtocol::new,
